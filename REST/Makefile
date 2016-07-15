@@ -12,7 +12,7 @@ main: base64.o jsoncpp.o twitter-parser.o
 twitter-parser.o: twitter-parser.cpp 
 	$(CC) $(CFLAGS) -c twitter-parser.cpp
 
-jsoncpp.o: jsoncpp.cpp json.h 
+jsoncpp.o: jsoncpp.cpp json/json.h 
 	$(CC) $(CFLAGS) -c jsoncpp.cpp
 
 base64.o: base64.cpp base64.h
