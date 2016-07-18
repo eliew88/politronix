@@ -1,8 +1,9 @@
 #include "restclient-cpp/connection.h"
 #include "restclient-cpp/restclient.h"
-#include <iostream>
 #include "base64.h"
 #include "json/json.h"
+#include <iostream>
+#include <string>
 
 using namespace std;
 
@@ -34,11 +35,14 @@ string get_bearer_token(string key, string secret) {
     Json::Value root;
     Json::FastWriter fastWriter;
     json_reader.parse(body, root, false);
-    string access_token = fastWriter.write(root.get("access_token", NULL)); // TODO give it a non-null argument here
-    return access_token;
+    string access_token = fastWriter.write(root.get("access_token", 0)); // TODO give it a non-null argument here
+    
+    // json fastWriter returns a extra chars at the end of the string
+    string token = access_token.substr(1, access_token.length() - 3);
+    return token;
 }
 
-void print_tweets(string search_query, string auth) {
+void print_tweets(string search_query, string auth, string n_tweets) {
     
     RestClient::init();
     RestClient::Connection *conn = new RestClient::Connection("https://api.twitter.com/1.1/search/tweets.json");
@@ -49,7 +53,7 @@ void print_tweets(string search_query, string auth) {
     conn->SetHeaders(headers);
 
     // issue the request to the REST api for our search term
-    string request = "?q=" + search_query;
+    string request = "?q=" + search_query + "&count=" + n_tweets;
     RestClient::Response r = conn->get(request);
     delete conn;
     RestClient::disable();
@@ -59,8 +63,12 @@ void print_tweets(string search_query, string auth) {
     Json::Reader json_reader;
     Json::Value root_json;
     json_reader.parse(body, root_json, false);
+    Json::Value statuses = root_json["statuses"];
+    
+    for (unsigned int i = 0; i < statuses.size(); i++) {
+        cout << statuses[i]["text"].asString() << endl;
+    }
 
-    cout << root_json << endl;
 }
 
 
@@ -68,15 +76,8 @@ int main(int argc, char *argv[]) {
     string consumer_key    = "5d4rCYhsym7BbdKfmeD0uftca";
     string consumer_secret = "VR6dnqif2EioPxYAJjpanBhncZRA32fbLAHdVUHZYyMTG1dY4N";
     
-    string auth = get_bearer_token(consumer_key, consumer_secret);
-    string auth_clean = auth.substr(1,auth.length() - 3); // json fastWriter returns a extra chars at the end of the string
-
-
+    string auth = get_bearer_token(consumer_key, consumer_secret); 
+    print_tweets(argv[1], auth, argv[2]);
     
-    cout << auth << endl;
-    cout << auth_clean << endl;
-    print_tweets("trump", auth_clean);
-    
-    cout << "program completed." << endl;
     return 0;
 }
