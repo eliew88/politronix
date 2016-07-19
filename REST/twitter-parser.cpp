@@ -35,11 +35,9 @@ string get_bearer_token(string key, string secret) {
     Json::Value root;
     Json::FastWriter fastWriter;
     json_reader.parse(body, root, false);
-    string access_token = fastWriter.write(root.get("access_token", 0)); // TODO give it a non-null argument here
+    string access_token = root["access_token"].asString();
     
-    // json fastWriter returns a extra chars at the end of the string
-    string token = access_token.substr(1, access_token.length() - 3);
-    return token;
+    return access_token;
 }
 
 void print_tweets(string search_query, string auth, string n_tweets) {
