@@ -4,6 +4,8 @@
 #include "json/json.h"
 #include <iostream>
 #include <string>
+#include <sstream>
+#include <set>
 
 using namespace std;
 
@@ -40,6 +42,34 @@ string get_bearer_token(string key, string secret) {
     return access_token;
 }
 
+/* Function: score_tweet
+ * ---------------------
+ * Scores a tweet based on the numbers of positive and negative words in the tweet,
+ * returning the calculated score.
+ *
+ * TODO: Make pos_words and neg_words actually contain positive and negative words, 
+ * maybe load them from a file?
+ */
+double score_tweet(string tweet) {
+    set<string> pos_words;
+    pos_words.insert("a"); // Just for simple testing
+    set<string> neg_words;
+    neg_words.insert("the"); //Just for simple testing
+    double score = 0;
+    istringstream iss(tweet);
+    string word;
+    // iterate over words in tweet, contributing each word to overall score
+    while (iss >> word) {
+        if (pos_words.find(word) != pos_words.end()) {
+            score++;
+        }
+        if (neg_words.find(word) != neg_words.end()) {
+            score--;
+        }
+    }
+    return score;
+}
+
 void print_tweets(string search_query, string auth, string n_tweets) {
     
     RestClient::init();
@@ -64,7 +94,9 @@ void print_tweets(string search_query, string auth, string n_tweets) {
     Json::Value statuses = root_json["statuses"];
     
     for (unsigned int i = 0; i < statuses.size(); i++) {
-        cout << statuses[i]["text"].asString() << endl;
+        string tweet = statuses[i]["text"].asString();
+        double score = score_tweet(tweet);
+        cout << "Tweet: " << tweet << "     Score: " << score << endl;
     }
 
 }
@@ -74,8 +106,12 @@ int main(int argc, char *argv[]) {
     string consumer_key    = "5d4rCYhsym7BbdKfmeD0uftca";
     string consumer_secret = "VR6dnqif2EioPxYAJjpanBhncZRA32fbLAHdVUHZYyMTG1dY4N";
     
-    string auth = get_bearer_token(consumer_key, consumer_secret); 
-    print_tweets(argv[1], auth, argv[2]);
+    string auth = get_bearer_token(consumer_key, consumer_secret);
+    if (argc == 3) { 
+        print_tweets(argv[1], auth, argv[2]);
+    } else {
+        cout << "Invalid # of arguments. Arg1: search term, Arg2: number of tweets." << endl;
+    }
     
     return 0;
 }
