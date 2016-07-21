@@ -5,7 +5,9 @@
 #include <iostream>
 #include <string>
 #include <sstream>
+#include <fstream>
 #include <set>
+#include <map>
 
 using namespace std;
 
@@ -46,31 +48,19 @@ string get_bearer_token(string key, string secret) {
  * ---------------------
  * Scores a tweet based on the numbers of positive and negative words in the tweet,
  * returning the calculated score.
- *
- * TODO: Make pos_words and neg_words actually contain positive and negative words, 
- * maybe load them from a file?
  */
-double score_tweet(string tweet) {
-    set<string> pos_words;
-    pos_words.insert("a"); // Just for simple testing
-    set<string> neg_words;
-    neg_words.insert("the"); //Just for simple testing
+double score_tweet(string tweet, map<string, double>& word_scores) {
     double score = 0;
     istringstream iss(tweet);
     string word;
     // iterate over words in tweet, contributing each word to overall score
     while (iss >> word) {
-        if (pos_words.find(word) != pos_words.end()) {
-            score++;
-        }
-        if (neg_words.find(word) != neg_words.end()) {
-            score--;
-        }
+        score += word_scores[word];
     }
     return score;
 }
 
-void print_tweets(string search_query, string auth, string n_tweets) {
+void print_tweets(string search_query, string auth, string n_tweets, map<string, double>& word_scores) {
     
     RestClient::init();
     RestClient::Connection *conn = new RestClient::Connection("https://api.twitter.com/1.1/search/tweets.json");
@@ -93,22 +83,76 @@ void print_tweets(string search_query, string auth, string n_tweets) {
     json_reader.parse(body, root_json, false);
     Json::Value statuses = root_json["statuses"];
     
+    double totalScore = 0;
+
     for (unsigned int i = 0; i < statuses.size(); i++) {
         string tweet = statuses[i]["text"].asString();
-        double score = score_tweet(tweet);
+        double score = score_tweet(tweet, word_scores);
+        totalScore += score;
         cout << "Tweet: " << tweet << "     Score: " << score << endl;
     }
 
+    cout << "Total score for " << search_query << " is " << totalScore << endl; 
+
+}
+
+string trim_word(string untrimmed) {
+    return untrimmed.substr(0, untrimmed.length() - 2);
+}
+
+//For testing purposes, prints map of sentiment scores
+void print_map(map<string, double> map) {
+    for (std::map<string,double>::iterator it=map.begin(); it!=map.end(); ++it) {
+        cout << it->first << "=>" << it->second << endl;
+    }
+    cout << endl;
+}
+
+map<string, double> create_map() {
+    map<string, double> word_scores;
+    ifstream file("SentiWordNet_3.0.0_20130122.txt");
+    string entry;
+
+    for (int i = 0; i < 27; i++) {
+        getline(file, entry);
+    }
+
+    while (file >> entry) {
+        file >> entry;
+        file >> entry;
+
+
+        
+        double score = 0;
+        if (entry != "#" && entry != "") {
+            score = stod(entry);
+        }
+        file >> entry;
+        if (entry != "#" && entry != "") {
+            score -= stod(entry);
+        }
+
+        file >> entry;
+
+        string word = trim_word(entry);
+        word_scores[word] = score;
+
+        getline(file, entry);
+    }
+    //print_map(word_scores);
+    return word_scores;
 }
 
 
 int main(int argc, char *argv[]) {
     string consumer_key    = "5d4rCYhsym7BbdKfmeD0uftca";
     string consumer_secret = "VR6dnqif2EioPxYAJjpanBhncZRA32fbLAHdVUHZYyMTG1dY4N";
+
+    map<string, double> word_scores = create_map();
     
     string auth = get_bearer_token(consumer_key, consumer_secret);
     if (argc == 3) { 
-        print_tweets(argv[1], auth, argv[2]);
+        print_tweets(argv[1], auth, argv[2], word_scores);
     } else {
         cout << "Invalid # of arguments. Arg1: search term, Arg2: number of tweets." << endl;
     }
