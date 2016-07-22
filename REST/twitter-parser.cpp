@@ -17,7 +17,7 @@ string encode_oauth(string consumer_key, string consumer_secret) {
 }
 
 string get_bearer_token(string key, string secret) {
-   
+
     RestClient::init();
     RestClient::Connection* conn = new RestClient::Connection("");
 
@@ -40,7 +40,7 @@ string get_bearer_token(string key, string secret) {
     Json::FastWriter fastWriter;
     json_reader.parse(body, root, false);
     string access_token = root["access_token"].asString();
-    
+
     return access_token;
 }
 
@@ -61,7 +61,7 @@ double score_tweet(string tweet, map<string, double>& word_scores) {
 }
 
 void print_tweets(string search_query, string auth, string n_tweets, map<string, double>& word_scores) {
-    
+
     RestClient::init();
     RestClient::Connection *conn = new RestClient::Connection("https://api.twitter.com/1.1/search/tweets.json");
 
@@ -82,7 +82,7 @@ void print_tweets(string search_query, string auth, string n_tweets, map<string,
     Json::Value root_json;
     json_reader.parse(body, root_json, false);
     Json::Value statuses = root_json["statuses"];
-    
+
     double totalScore = 0;
 
     for (unsigned int i = 0; i < statuses.size(); i++) {
@@ -121,8 +121,6 @@ map<string, double> create_map() {
         file >> entry;
         file >> entry;
 
-
-        
         double score = 0;
         if (entry != "#" && entry != "") {
             score = stod(entry);
@@ -144,18 +142,52 @@ map<string, double> create_map() {
 }
 
 
+void continual_tweets(string search, string auth, map<string, double>& word_scores) {
+    RestClient::init();
+    RestClient::Connection *conn = new RestClient::Connection("https://api.twitter.com/1.1/search/tweets.json");
+
+    RestClient::HeaderFields headers;
+    headers["Authorization"] = "Bearer " + auth;
+    conn->SetHeaders(headers);
+
+    while(true) {
+        //issue the request to the REST api for our search term
+        string request = "?q=" + search + "&count=" + "10"; //ten each time
+        RestClient::Response r = conn->get(request);
+        delete conn;
+        RestClient::disable();
+
+        // parse the returned json with the linked Json library
+        const string &body = r.body;
+        Json::Reader json_reader;
+        Json::Value root_json;
+        json_reader.parse(body, root_json, false);
+        Json::Value statuses = root_json["statuses"];
+
+        for (unsigned int i = 0; i < statuses.size(); i++) {
+            string tweet = statuses[i]["text"].asString();
+            double score = score_tweet(tweet, word_scores);
+            cout << "Tweet: " << tweet << "     Score: " << score << endl;
+        }
+
+        sleep(1);
+    }
+}
+
 int main(int argc, char *argv[]) {
     string consumer_key    = "5d4rCYhsym7BbdKfmeD0uftca";
     string consumer_secret = "VR6dnqif2EioPxYAJjpanBhncZRA32fbLAHdVUHZYyMTG1dY4N";
 
     map<string, double> word_scores = create_map();
-    
+
     string auth = get_bearer_token(consumer_key, consumer_secret);
     if (argc == 3) { 
         print_tweets(argv[1], auth, argv[2], word_scores);
-    } else {
+    } else if (argc == 2) {
+        continual_tweets(argv[1], auth, word_scores);   
+    }else {
         cout << "Invalid # of arguments. Arg1: search term, Arg2: number of tweets." << endl;
-    }
-    
+    } 
+
     return 0;
 }
