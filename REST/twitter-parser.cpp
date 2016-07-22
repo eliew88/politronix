@@ -143,16 +143,16 @@ map<string, double> create_map() {
 
 
 void continual_tweets(string search, string auth, map<string, double>& word_scores) {
-    RestClient::init();
-    RestClient::Connection *conn = new RestClient::Connection("https://api.twitter.com/1.1/search/tweets.json");
-
-    RestClient::HeaderFields headers;
-    headers["Authorization"] = "Bearer " + auth;
-    conn->SetHeaders(headers);
-
     while(true) {
+        RestClient::init();
+        RestClient::Connection *conn = new RestClient::Connection("https://api.twitter.com/1.1/search/tweets.json");
+
+        RestClient::HeaderFields headers;
+        headers["Authorization"] = "Bearer " + auth;
+        conn->SetHeaders(headers);
+
         //issue the request to the REST api for our search term
-        string request = "?q=" + search + "&count=" + "10"; //ten each time
+        string request = "?q=" + search + "&count=" + "100"; //ten each time
         RestClient::Response r = conn->get(request);
         delete conn;
         RestClient::disable();
