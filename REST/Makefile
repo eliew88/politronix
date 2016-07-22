@@ -1,22 +1,31 @@
 # Makefile
 # Author: politronix team
 
+
+
 CC=g++
 CFLAGS= -Wall
 
-all: main
+SOURCEDIR=src
+BUILDDIR=build
 
-main: base64.o jsoncpp.o twitter-parser.o 
-	$(CC) $(CFLAGS) -lcurl -lrestclient-cpp -o main base64.o jsoncpp.o twitter-parser.o
+EXECUTABLE= sentiment-continual
+SOURCES=$(wildcard $(SOURCEDIR)/*.cpp)
+OBJECTS=$(patsubst $(SOURCEDIR)/%.cpp,$(BUILDDIR)/%.o,$(SOURCES))
 
-twitter-parser.o: twitter-parser.cpp 
-	$(CC) $(CFLAGS) -c twitter-parser.cpp
+LINKS= -lcurl -lrestclient-cpp
 
-jsoncpp.o: jsoncpp.cpp json/json.h 
-	$(CC) $(CFLAGS) -c jsoncpp.cpp
+all: dir $(EXECUTABLE)
 
-base64.o: base64.cpp base64.h
-	$(CC) $(CFLAGS) -c base64.cpp
+dir:
+	mkdir -p $(BUILDDIR)
+
+$(EXECUTABLE): $(OBJECTS)
+	$(CC) $^ $(LINKS) -o $@ 
+
+$(OBJECTS): $(BUILDDIR)/%.o : $(SOURCEDIR)/%.cpp
+	$(CC) $(CFLAGS) -c $< -o $@ 
 
 clean:
-	rm *o main 
+	rm -f $(BUILDDIR)/*o $(EXECUTABLE)
+
