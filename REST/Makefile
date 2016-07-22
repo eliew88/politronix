@@ -4,7 +4,7 @@
 
 
 CC=g++
-CFLAGS= -Wall
+CFLAGS= -Wall -std=c++11
 
 SOURCEDIR=src
 BUILDDIR=build
@@ -13,7 +13,7 @@ EXECUTABLE= sentiment-continual
 SOURCES=$(wildcard $(SOURCEDIR)/*.cpp)
 OBJECTS=$(patsubst $(SOURCEDIR)/%.cpp,$(BUILDDIR)/%.o,$(SOURCES))
 
-LINKS= -lcurl -lrestclient-cpp
+LINKS= -lcurl -lrestclient-cpp -lmysqlcppconn
 
 all: dir $(EXECUTABLE)
 
