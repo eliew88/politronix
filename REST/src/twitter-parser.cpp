@@ -1,5 +1,11 @@
 #include "restclient-cpp/connection.h"
 #include "restclient-cpp/restclient.h"
+#include "mysql_connection.h"
+#include "mysql_driver.h"
+#include <cppconn/driver.h>
+#include <cppconn/exception.h>
+#include <cppconn/statement.h>
+
 #include "base64.h"
 #include "json/json.h"
 #include <iostream>
@@ -8,6 +14,7 @@
 #include <fstream>
 #include <set>
 #include <map>
+#include <unistd.h>
 
 using namespace std;
 
@@ -140,25 +147,40 @@ map<string, double> create_map() {
 
         getline(file, entry);
     }
-    //print_map(word_scores);
+    // print_map(word_scores);
     return word_scores;
 }
 
 
-void continual_tweets(string search, string auth, map<string, double>& word_scores) {
-    while(true) {
-        RestClient::init();
-        RestClient::Connection *conn = new RestClient::Connection("https://api.twitter.com/1.1/search/tweets.json");
 
-        RestClient::HeaderFields headers;
-        headers["Authorization"] = "Bearer " + auth;
-        conn->SetHeaders(headers);
+void continual_tweets(string search, string auth, map<string, double>& word_scores) {
+    // init sql_connection
+    
+    sql::mysql::MySQL_Driver *driver;
+    sql::Connection *sql_conn;
+    sql::Statement *stmt;
+
+    driver = sql::mysql::get_mysql_driver_instance();
+    sql_conn = driver->connect("localhost", "george", "testpw");
+
+    stmt = sql_conn->createStatement();
+
+    stmt->execute("USE POLITRONIX");
+   
+
+    // Init REST Client
+    RestClient::init();
+    RestClient::Connection *conn = new RestClient::Connection("https://api.twitter.com/1.1/search/tweets.json");
+
+    RestClient::HeaderFields headers;
+    headers["Authorization"] = "Bearer " + auth;
+    conn->SetHeaders(headers);
+    
+    while(true) {
 
         //issue the request to the REST api for our search term
         string request = "?q=" + search + "&count=" + "100"; //100 (MAX) each time
         RestClient::Response r = conn->get(request);
-        delete conn;
-        RestClient::disable();
 
         // parse the returned json with the linked Json library
         const string &body = r.body;
@@ -166,15 +188,29 @@ void continual_tweets(string search, string auth, map<string, double>& word_scor
         Json::Value root_json;
         json_reader.parse(body, root_json, false);
         Json::Value statuses = root_json["statuses"];
-
+        
+        double total_score = 0;
         for (unsigned int i = 0; i < statuses.size(); i++) {
             string tweet = statuses[i]["text"].asString();
-            double score = score_tweet(tweet, word_scores);
-            cout << "Tweet: " << tweet << "     Score: " << score << endl;
+            double tweet_score = score_tweet(tweet, word_scores);
+            total_score += tweet_score;
         }
 
-        sleep(1); //pause for 1 sec
+        //sleep(1); //pause for 1 sec
+        
+        string double_str = static_cast<ostringstream&>(ostringstream() << total_score).str();
+        string sql_statement = "INSERT INTO data(topic, score) VALUES ('" + search + "', " + double_str + ")";
+        cout << sql_statement << endl;
+        stmt->execute(sql_statement);
+        
+        usleep(4000000);
     }
+    
+    delete conn;
+    RestClient::disable();
+
+    delete stmt;
+    delete sql_conn;
 }
 
 int main(int argc, char *argv[]) {
@@ -185,11 +221,13 @@ int main(int argc, char *argv[]) {
     //print_map(word_scores);
 
     string auth = get_bearer_token(consumer_key, consumer_secret);
+    
+    
     if (argc == 3) { 
         print_tweets(argv[1], auth, argv[2], word_scores);
     } else if (argc == 2) {
         continual_tweets(argv[1], auth, word_scores);   
-    }else {
+    } else {
         cout << "Invalid # of arguments. Arg1: search term, Arg2: number of tweets." << endl;
     } 
 
