@@ -110,13 +110,16 @@ void print_map(map<string, double> map) {
 
 map<string, double> create_map() {
     map<string, double> word_scores;
-    ifstream file("SentiWordNet_3.0.0_20130122.txt");
-    string entry;
+    ifstream file("src/SentiWordNet_3.0.0_20130122.txt");
 
+    string entry;
+    
+    //Get rid of the documentation (first 27 lines of the text file)
     for (int i = 0; i < 27; i++) {
         getline(file, entry);
     }
-
+    
+    //parse the rest of the file (each run of loop parses one line)
     while (file >> entry) {
         file >> entry;
         file >> entry;
@@ -152,7 +155,7 @@ void continual_tweets(string search, string auth, map<string, double>& word_scor
         conn->SetHeaders(headers);
 
         //issue the request to the REST api for our search term
-        string request = "?q=" + search + "&count=" + "100"; //ten each time
+        string request = "?q=" + search + "&count=" + "100"; //100 (MAX) each time
         RestClient::Response r = conn->get(request);
         delete conn;
         RestClient::disable();
@@ -170,7 +173,7 @@ void continual_tweets(string search, string auth, map<string, double>& word_scor
             cout << "Tweet: " << tweet << "     Score: " << score << endl;
         }
 
-        sleep(1);
+        sleep(1); //pause for 1 sec
     }
 }
 
@@ -179,6 +182,7 @@ int main(int argc, char *argv[]) {
     string consumer_secret = "VR6dnqif2EioPxYAJjpanBhncZRA32fbLAHdVUHZYyMTG1dY4N";
 
     map<string, double> word_scores = create_map();
+    //print_map(word_scores);
 
     string auth = get_bearer_token(consumer_key, consumer_secret);
     if (argc == 3) { 
