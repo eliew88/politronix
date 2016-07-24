@@ -22,10 +22,9 @@
 using namespace std;
 
 // Change these to your MYSQL access credentials. 
-// TODO(ari); change this to not be in the sourcecode. We want to put it in a config file. 
 const char MYSQL_HOST[] = "localhost";
-const char MYSQL_USER[] = "ariechtwilson";
-const char MYSQL_PASSWORD[] = "caravaggio"; 
+const char MYSQL_USER[] = "politronix";
+const char MYSQL_PASSWORD[] = "sbs456Team"; 
 
 string encode_oauth(string consumer_key, string consumer_secret) {
     string concat_key_secret = consumer_key + ":" + consumer_secret;
