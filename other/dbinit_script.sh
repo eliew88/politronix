@@ -3,16 +3,16 @@
 # 07.19.16
 # --------
 
-EXPECTED_ARGS=2
+EXPECTED_ARGS=0
 E_BADARGS=65
 MYSQL=`which mysql`
 MYSQL_SERVICE="mysql"
 
 Q1="CREATE DATABASE IF NOT EXISTS POLITRONIX;"
-Q2="GRANT USAGE ON POLITRONIX.* TO $1@localhost IDENTIFIED BY '$2';"
-Q3="GRANT ALL PRIVILEGES ON POLITRONIX.* TO $1@localhost;"
+Q2="GRANT USAGE ON POLITRONIX.* TO politronix@localhost IDENTIFIED BY 'sbs456Team';"
+Q3="GRANT ALL PRIVILEGES ON POLITRONIX.* TO politronix@localhost;"
 Q4="FLUSH PRIVILEGES;"
-DB_CREATE="${Q1}${Q2}${Q3}${Q4}${Q5}"
+DB_CREATE="${Q1}${Q2}${Q3}${Q4}"
 SELECT_DB="use POLITRONIX;";
 TABLE_CREATE="CREATE TABLE data (id INT UNSIGNED AUTO_INCREMENT, topic VARCHAR(20), score FLOAT, datetime DATETIME, PRIMARY KEY (id));"
 
@@ -23,7 +23,7 @@ ALL="${DB_CREATE}${SELECT_DB}${TABLE_CREATE}"
 
 if [ $# -ne $EXPECTED_ARGS ]
 then
-    echo "Usage: $0 dbuser dbpass"
+    echo "Usage: $0"
     exit $E_BADARGS
 fi
 
@@ -40,4 +40,4 @@ set -e
 echo "Attempting to add new user, database and data table to your MySQL server."
 echo "Enter your MySQL ROOT password in the ensuing prompt."
 $MYSQL -u root -p -e "$ALL"
-echo "POLITRONIX db and table successfully created. Thanks for flying with GWPH airways."
+echo "POLITRONIX db and table successfully created. Thanks for flying with G&R airways."
