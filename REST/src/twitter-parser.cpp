@@ -200,7 +200,9 @@ void continual_tweets(string search, string auth, map<string, double>& word_scor
         Json::Value root_json;
         json_reader.parse(body, root_json, false);
         Json::Value statuses = root_json["statuses"];
-        
+       
+	cout << "Fetched: " + to_string(statuses.size()) + " tweets." << endl;
+ 
         double total_score = 0;
         for (unsigned int i = 0; i < statuses.size(); i++) {
             string tweet = statuses[i]["text"].asString();
@@ -217,7 +219,7 @@ void continual_tweets(string search, string auth, map<string, double>& word_scor
         cout << sql_statement << endl;
         stmt->execute(sql_statement);
         
-        usleep(1000000);
+        usleep(40000000);
     }
     
     delete conn;
