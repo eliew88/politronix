@@ -1,3 +1,5 @@
+// Twitter client that writes sentiment to a database.
+
 #include "restclient-cpp/connection.h"
 #include "restclient-cpp/restclient.h"
 #include "mysql_connection.h"
@@ -17,6 +19,12 @@
 #include <unistd.h>
 
 using namespace std;
+
+// Change these to your MYSQL access credentials. 
+// TODO(ari); change this to not be in the sourcecode. We want to put it in a config file. 
+const char MYSQL_HOST[] = "localhost";
+const char MYSQL_USER[] = "ariechtwilson";
+const char MYSQL_PASSWORD[] = "caravaggio"; 
 
 string encode_oauth(string consumer_key, string consumer_secret) {
     string concat_key_secret = consumer_key + ":" + consumer_secret;
@@ -161,7 +169,7 @@ void continual_tweets(string search, string auth, map<string, double>& word_scor
     sql::Statement *stmt;
 
     driver = sql::mysql::get_mysql_driver_instance();
-    sql_conn = driver->connect("localhost", "george", "testpw");
+    sql_conn = driver->connect(MYSQL_HOST, MYSQL_USER, MYSQL_PASSWORD);
 
     stmt = sql_conn->createStatement();
 
@@ -198,7 +206,8 @@ void continual_tweets(string search, string auth, map<string, double>& word_scor
 
         //sleep(1); //pause for 1 sec
         
-        string double_str = static_cast<ostringstream&>(ostringstream() << total_score).str();
+        //string double_str = static_cast<ostringstream&>(ostringstream() << total_score).str();
+        string double_str = to_string(total_score);
         string sql_statement = "INSERT INTO data(topic, score) VALUES ('" + search + "', " + double_str + ")";
         cout << sql_statement << endl;
         stmt->execute(sql_statement);
@@ -214,13 +223,13 @@ void continual_tweets(string search, string auth, map<string, double>& word_scor
 }
 
 int main(int argc, char *argv[]) {
-    string consumer_key    = "5d4rCYhsym7BbdKfmeD0uftca";
-    string consumer_secret = "VR6dnqif2EioPxYAJjpanBhncZRA32fbLAHdVUHZYyMTG1dY4N";
+    string twitter_key    = "5d4rCYhsym7BbdKfmeD0uftca";
+    string twitter_secret = "VR6dnqif2EioPxYAJjpanBhncZRA32fbLAHdVUHZYyMTG1dY4N";
 
     map<string, double> word_scores = create_map();
     //print_map(word_scores);
 
-    string auth = get_bearer_token(consumer_key, consumer_secret);
+    string auth = get_bearer_token(twitter_key, twitter_secret);
     
     
     if (argc == 3) { 

@@ -39,5 +39,5 @@ fi
 set -e
 echo "Attempting to add new user, database and data table to your MySQL server."
 echo "Enter your MySQL ROOT password in the ensuing prompt."
-$MYSQL -uroot -p -e "$ALL"
+$MYSQL -u root -p -e "$ALL"
 echo "POLITRONIX db and table successfully created. Thanks for flying with GWPH airways."
