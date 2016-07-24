@@ -11,6 +11,7 @@
 #include "base64.h"
 #include "json/json.h"
 #include <iostream>
+#include <boost/date_time/posix_time/posix_time.hpp>
 #include <string>
 #include <sstream>
 #include <fstream>
@@ -125,7 +126,7 @@ void print_map(map<string, double> map) {
 
 map<string, double> create_map() {
     map<string, double> word_scores;
-    ifstream file("src/SentiWordNet_3.0.0_20130122.txt");
+    ifstream file("SentiWordNet_3.0.0_20130122.txt");
 
     string entry;
     
@@ -158,7 +159,11 @@ map<string, double> create_map() {
     // print_map(word_scores);
     return word_scores;
 }
-
+string get_current_time() {
+    using namespace boost::posix_time;
+    ptime t = microsec_clock::universal_time(); 
+    return to_iso_extended_string(t);
+}
 
 
 void continual_tweets(string search, string auth, map<string, double>& word_scores) {
@@ -204,15 +209,16 @@ void continual_tweets(string search, string auth, map<string, double>& word_scor
             total_score += tweet_score;
         }
 
-        //sleep(1); //pause for 1 sec
-        
-        //string double_str = static_cast<ostringstream&>(ostringstream() << total_score).str();
         string double_str = to_string(total_score);
-        string sql_statement = "INSERT INTO data(topic, score) VALUES ('" + search + "', " + double_str + ")";
+        string sql_statement = 
+	    "INSERT INTO data(topic, score, datetime) VALUES ('"
+	    + search + "'," 
+	    + double_str + ", '"
+	    + get_current_time() + "')";
         cout << sql_statement << endl;
         stmt->execute(sql_statement);
         
-        usleep(4000000);
+        usleep(1000000);
     }
     
     delete conn;

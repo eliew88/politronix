@@ -13,7 +13,7 @@ EXECUTABLE= sentiment-continual
 SOURCES=$(wildcard $(SOURCEDIR)/*.cpp)
 OBJECTS=$(patsubst $(SOURCEDIR)/%.cpp,$(BUILDDIR)/%.o,$(SOURCES))
 
-LINKS= -lcurl -lrestclient-cpp -lmysqlcppconn
+LINKS= -lcurl -lrestclient-cpp -lmysqlcppconn -lboost_date_time 
 
 all: dir $(EXECUTABLE)
 
