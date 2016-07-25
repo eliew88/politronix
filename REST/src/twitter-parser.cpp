@@ -70,18 +70,20 @@ double score_tweet(string tweet, map<string, double>& word_scores) {
     istringstream iss(tweet);
     string word;
     static unordered_set<string> negation_words = {
-	"not", "no", "never", "don't", "cannot", "ain't", "aren't", "can't", "couldn't",
-	"didn't", "doesn't", "hadn't", "hasn't", "haven't", "mustn't", "needn't", 
-	"shouldn't", "wasn't", "weren't", "won't", "wouldn't"};
+        "not", "no", "never", "don't", "cannot", "ain't", "aren't", "can't", "couldn't",
+        "didn't", "doesn't", "hadn't", "hasn't", "haven't", "mustn't", "needn't", 
+        "shouldn't", "wasn't", "weren't", "won't", "wouldn't"};
     bool last_word_negative = false;
     // iterate over words in tweet, contributing each word to overall score
     while (iss >> word) {
-	if (last_word_negative) {
-	    score -= word_scores[word];
-	} else {
-            score += word_scores[word];
-	}
-	last_word_negative = (negation_words.find(word) != negation_words.end());
+        if (negation_words.find(word) == negation_words.end()) {
+            if (last_word_negative) {
+                score -= word_scores[word];
+            } else {
+                score += word_scores[word];
+            }
+        }
+        last_word_negative = (negation_words.find(word) != negation_words.end());
     }
     return score;
 }
@@ -139,12 +141,12 @@ map<string, double> create_map() {
     ifstream file("SentiWordNet_3.0.0_20130122.txt");
 
     string entry;
-    
+
     //Get rid of the documentation (first 27 lines of the text file)
     for (int i = 0; i < 27; i++) {
         getline(file, entry);
     }
-    
+
     //parse the rest of the file (each run of loop parses one line)
     while (file >> entry) {
         file >> entry;
@@ -178,7 +180,7 @@ string get_current_time() {
 
 void continual_tweets(string search, string auth, map<string, double>& word_scores) {
     // init sql_connection
-    
+
     sql::mysql::MySQL_Driver *driver;
     sql::Connection *sql_conn;
     sql::Statement *stmt;
@@ -189,7 +191,7 @@ void continual_tweets(string search, string auth, map<string, double>& word_scor
     stmt = sql_conn->createStatement();
 
     stmt->execute("USE POLITRONIX");
-   
+
 
     // Init REST Client
     RestClient::init();
@@ -198,7 +200,7 @@ void continual_tweets(string search, string auth, map<string, double>& word_scor
     RestClient::HeaderFields headers;
     headers["Authorization"] = "Bearer " + auth;
     conn->SetHeaders(headers);
-    
+
     while(true) {
 
         //issue the request to the REST api for our search term
@@ -211,9 +213,9 @@ void continual_tweets(string search, string auth, map<string, double>& word_scor
         Json::Value root_json;
         json_reader.parse(body, root_json, false);
         Json::Value statuses = root_json["statuses"];
-       
-	cout << "Fetched: " + to_string(statuses.size()) + " tweets." << endl;
- 
+
+        cout << "Fetched: " + to_string(statuses.size()) + " tweets." << endl;
+
         double total_score = 0;
         for (unsigned int i = 0; i < statuses.size(); i++) {
             string tweet = statuses[i]["text"].asString();
@@ -223,16 +225,16 @@ void continual_tweets(string search, string auth, map<string, double>& word_scor
 
         string double_str = to_string(total_score);
         string sql_statement = 
-	    "INSERT INTO data(topic, score, datetime) VALUES ('"
-	    + search + "'," 
-	    + double_str + ", '"
-	    + get_current_time() + "')";
+            "INSERT INTO data(topic, score, datetime) VALUES ('"
+            + search + "'," 
+            + double_str + ", '"
+            + get_current_time() + "')";
         cout << sql_statement << endl;
         stmt->execute(sql_statement);
-        
+
         usleep(4000000);
     }
-    
+
     delete conn;
     RestClient::disable();
 
@@ -248,8 +250,8 @@ int main(int argc, char *argv[]) {
     //print_map(word_scores);
 
     string auth = get_bearer_token(twitter_key, twitter_secret);
-    
-    
+
+
     if (argc == 3) { 
         print_tweets(argv[1], auth, argv[2], word_scores);
     } else if (argc == 2) {
