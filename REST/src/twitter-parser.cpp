@@ -18,10 +18,11 @@
 #include <set>
 #include <map>
 #include <unistd.h>
+#include <unordered_set>
 
 using namespace std;
 
-// Change these to your MYSQL access credentials. 
+// The following user and password has to have access on the MYSQL database. 
 const char MYSQL_HOST[] = "localhost";
 const char MYSQL_USER[] = "politronix";
 const char MYSQL_PASSWORD[] = "sbs456Team"; 
@@ -68,9 +69,19 @@ double score_tweet(string tweet, map<string, double>& word_scores) {
     double score = 0;
     istringstream iss(tweet);
     string word;
+    static unordered_set<string> negation_words = {
+	"not", "no", "never", "don't", "cannot", "ain't", "aren't", "can't", "couldn't",
+	"didn't", "doesn't", "hadn't", "hasn't", "haven't", "mustn't", "needn't", 
+	"shouldn't", "wasn't", "weren't", "won't", "wouldn't"};
+    bool last_word_negative = false;
     // iterate over words in tweet, contributing each word to overall score
     while (iss >> word) {
-        score += word_scores[word];
+	if (last_word_negative) {
+	    score -= word_scores[word];
+	} else {
+            score += word_scores[word];
+	}
+	last_word_negative = (negation_words.find(word) != negation_words.end());
     }
     return score;
 }
@@ -219,7 +230,7 @@ void continual_tweets(string search, string auth, map<string, double>& word_scor
         cout << sql_statement << endl;
         stmt->execute(sql_statement);
         
-        usleep(40000000);
+        usleep(4000000);
     }
     
     delete conn;
