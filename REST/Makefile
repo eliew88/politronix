@@ -4,7 +4,7 @@
 
 
 CC=g++
-CFLAGS= -Wall -std=c++11
+CFLAGS= -Wall -std=c++11 -I/usr/local/include -L/usr/local/lib
 
 SOURCEDIR=src
 BUILDDIR=build
