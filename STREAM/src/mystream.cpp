@@ -33,28 +33,6 @@ const char *access_token_secret = "EPyeeT8wPaFJWQpUOPB7unOVN8UKDIPCvnHogzp9GtADm
  *
  */
 
-void sleepmil(int n_millisecs) {
-    usleep(n_millisecs * 1000);
-}
-
-bool handle_disconnect(int error_code, int n_disconnects) {
-    if(error_code == 500) {
-        int sleep_time = 250 * (n_disconnects + 1);
-        sleepmil(min(sleep_time, 16*1000));
-        return true;
-    } else if(error_code > 500) {
-        int sleep_time = (5*1000) * pow(2, n_disconnects);
-        sleepmil(min(sleep_time, 5*60*1000));
-        return true;
-    } else if(error_code >= 420 && error_code <= 429) {
-        int sleep_time = (1*1000) * pow(2, n_disconnects);
-        sleepmil(sleep_time);
-        return true;
-    } else {
-        return false;
-    }
-}
-
 int main(int argc, char *argv[]) {
 
     const char *url = "https://stream.twitter.com/1.1/statuses/sample.json";
