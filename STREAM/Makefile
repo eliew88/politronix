@@ -4,7 +4,8 @@
 
 
 CC=g++
-CFLAGS= -Wall -std=c++11 -Icurlcpp/include
+LDFLAGS=  -L/usr/local/opt/curl/lib
+CPPFLAGS= -Wall -std=c++11 -Icurlcpp/include -I/usr/local/opt/curl/include
 
 SOURCEDIR=src
 BUILDDIR=build
@@ -21,10 +22,10 @@ dir:
 	mkdir -p $(BUILDDIR)
 
 $(EXECUTABLE): $(OBJECTS)
-	$(CC) $^ $(LINKS) -o $@ 
+	$(CC) $(LDFLAGS) $^ $(LINKS) -o $@ 
 
 $(OBJECTS): $(BUILDDIR)/%.o : $(SOURCEDIR)/%.cpp
-	$(CC) $(CFLAGS) -c $< -o $@ 
+	$(CC) $(CPPFLAGS) -c $< -o $@ 
 
 clean:
 	rm -f $(BUILDDIR)/*o $(EXECUTABLE)

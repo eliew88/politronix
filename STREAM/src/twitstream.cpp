@@ -3,6 +3,9 @@
 #include "curl_ios.h"
 #include "curl_exception.h"
 
+#include <math.h>
+#include <unistd.h>
+
 
 
 using namespace std;
@@ -17,6 +20,8 @@ class TwitStream {
         void set_consumer_secret(string);
         void set_access_token(string);
         void set_access_token_secret(string);
+        bool handle_disconnect(int error_code, int n_disconnects);
+        void connect(void);
     private:
         string consumer_key;
         string consumer_secret;
@@ -51,17 +56,18 @@ void TwitStream::set_access_token_secret(string a_secret) {
 }
 
 bool TwitStream::handle_disconnect(int error_code, int n_disconnects) {
+    int m = 1e6;
     if(error_code == 500) {
-        int sleep_time = 250 * (n_disconnects + 1);
-        sleepmil(min(sleep_time, 16*1000));
+        int sleep_usec = 250 * (n_disconnects + 1);
+        usleep(min(sleep_usec, 16*m));
         return true;
     } else if(error_code > 500) {
-        int sleep_time = (5*1000) * pow(2, n_disconnects);
-        sleepmil(min(sleep_time, 5*60*1000));
+        int sleep_usec = (5*m) * pow(2, n_disconnects);
+        usleep(min(sleep_usec, 5*60*m));
         return true;
     } else if(error_code >= 420 && error_code <= 429) {
-        int sleep_time = (1*1000) * pow(2, n_disconnects);
-        sleepmil(sleep_time);
+        int sleep_usec = (1*m) * pow(2, n_disconnects);
+        usleep(sleep_usec);
         return true;
     } else {
         return false;

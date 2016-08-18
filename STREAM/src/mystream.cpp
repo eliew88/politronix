@@ -2,6 +2,7 @@
 #include "../curlcpp/include/curl_ios.h"
 #include "../curlcpp/include/curl_exception.h"
 
+#include <math.h>
 #include <oauth.h>
 #include <unistd.h>
 
