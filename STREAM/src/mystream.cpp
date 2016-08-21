@@ -1,13 +1,19 @@
+//#include <curl/curl.h>
+
+#include <math.h>
+#include <stdlib.h>
+#include <oauth.h>
+#include <unistd.h>
+#include <string> 
+
 #include "../curlcpp/include/curl_easy.h"
 #include "../curlcpp/include/curl_ios.h"
 #include "../curlcpp/include/curl_exception.h"
 
-#include <math.h>
-#include <oauth.h>
-#include <unistd.h>
+#include "tweetProcess.h"
 
 using namespace std;
-using namespace curl;
+//using namespace curl;
 
 // Access parameters for the POLITRONIX twitter account
 const char *consumer_key = "5d4rCYhsym7BbdKfmeD0uftca";
@@ -55,11 +61,55 @@ bool handle_disconnect(int error_code, int n_disconnects) {
     }
 }
 
+// change char * to void* ??  
+size_t tweet_callback(char *ptr, size_t size, size_t nmemb, void *userdata) {
+    
+    size_t total = size * nmemb; //find total size of data that came in 
+    string str = string(ptr, total); //turn input char * into c++ string 
+    TweetProcess *tweets = reinterpret_cast<TweetProcess*>(userdata); 
+    tweets->writeToBuffer(str); 
+    //cout << str; 
+    return total; 
+}
+
+
 int main(int argc, char *argv[]) {
 
+    TweetProcess *tweets = new TweetProcess; 
     const char *url = "https://stream.twitter.com/1.1/statuses/sample.json";
     char *signedurl = oauth_sign_url2(url, NULL, OA_HMAC, "GET", consumer_key, consumer_secret, access_token, access_token_secret);
 
+    curl_global_init(CURL_GLOBAL_ALL);
+    CURL *curl = curl_easy_init();
+
+    // URL we're connecting to
+    curl_easy_setopt(curl, CURLOPT_URL, signedurl);
+    
+    // User agent we're going to use, fill this in appropriately
+    curl_easy_setopt(curl, CURLOPT_USERAGENT, "Politronix/0.1"); //change 0.1 to 0.2 if issues with twitter?? 
+    
+    // libcurl will now fail on an HTTP error (>=400)
+    curl_easy_setopt(curl, CURLOPT_FAILONERROR, 1);
+    
+    // In this case, we're not specifying a callback function for
+    // handling received data, so libcURL will use the default, which
+    // is to write to the file specified in WRITEDATA
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, tweets);
+
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, tweet_callback); //when data comes it, this calls our write_callback function 
+
+
+    
+    // Execute the request!
+    int curlstatus = curl_easy_perform(curl);
+    printf("curl_easy_perform terminated with status code %d\n", curlstatus);
+    
+    curl_easy_cleanup(curl);
+    curl_global_cleanup();
+    
+    return 0;
+//////////////// 
+/*
     ofstream myfile;
     myfile.open("stream.txt");
 
@@ -71,5 +121,5 @@ int main(int argc, char *argv[]) {
 
     easy.perform();
     myfile.close();
-    return 0;
+    return 0;*/
 }
