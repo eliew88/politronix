@@ -7,7 +7,7 @@ class TweetProcess {
 	
 	public: 
 		TweetProcess();
-		void writeToBuffer(std::string input); 
+		void writeToBuffer(std::string input);
 		void processTweet(); 
 
 	private: 

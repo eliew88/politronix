@@ -3,7 +3,7 @@
 #include <oauth.h>
 #include <unistd.h>
 #include <string> 
-
+#include <curl/curl.h>
 
 #include "tweetProcess.h"
 
@@ -33,9 +33,7 @@ const char *access_token_secret = "EPyeeT8wPaFJWQpUOPB7unOVN8UKDIPCvnHogzp9GtADm
  *
  */
 
-
 /*
-sleep stuff 
 void sleepmil(int n_millisecs) {
     usleep(n_millisecs * 1000);
 }
@@ -58,7 +56,6 @@ bool handle_disconnect(int error_code, int n_disconnects) {
     }
 }
 */
-
 
 //called everytime new input is recieved, calls member function to parse input into tweets
 size_t tweet_callback(char *ptr, size_t size, size_t nmemb, void *userdata) {
