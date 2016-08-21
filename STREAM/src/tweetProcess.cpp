@@ -39,7 +39,7 @@ void TweetProcess::writeToBuffer(string input) {
 
 	for(int i = 0; i < input.size(); i++) {
 		if(input[i] != '\r') {
-			m_buffer[m_buffPlace] = input[i]; 
+			m_buffer[m_buffPlace] = tolower(input[i]); 
 			m_buffPlace++; 
 		}
 		else {
@@ -91,7 +91,7 @@ void TweetProcess::writeToDatabase(string tweet, string time, double score){
     stmt->execute("USE POLITRONIX");
 
 	int topicSize = 11; 
-	string topics[11] = {"clinton", "Trump", "donald", "hillary", "democrat", "republican", "election", "gary", "gohnson", "jill", "stein"}; 
+	string topics[11] = {"clinton", "trump", "donald", "hillary", "democrat", "republican", "election", "gary", "gohnson", "jill", "stein"}; 
 	size_t pos;
 	for(int i = 0; i < topicSize; i++) {
 		pos = tweet.find(topics[i]); 
