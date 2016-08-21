@@ -14,7 +14,7 @@ EXECUTABLE= streaming
 SOURCES=$(wildcard $(SOURCEDIR)/*.cpp)
 OBJECTS=$(patsubst $(SOURCEDIR)/%.cpp,$(BUILDDIR)/%.o,$(SOURCES))
 
-LINKS= -lcurl -lcurlcpp -loauth -lboost_date_time -Lcurlcpp/build/src 
+LINKS= -lcurl  -loauth -lboost_date_time  
 
 all: dir $(EXECUTABLE)
 
