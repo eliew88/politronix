@@ -25,16 +25,21 @@ const char MYSQL_HOST[] = "localhost";
 const char MYSQL_USER[] = "politronix";
 const char MYSQL_PASSWORD[] = "sbs456Team"; 
 
-
+/*
+ * Function: Constructor
+ * ---------------------
+ * create new instance, initialize map
+*/
 TweetProcess::TweetProcess() {
 	m_buffPlace = 0; 
 	m_sentiWordScores = create_map(); 
-	cout << "size map: "<< m_sentiWordScores.size() << endl; 
-
-
 }
 
-//break input string into individual tweets, and call process
+/*
+ * Function: writeToBuffer
+ * ---------------------
+ * break input string into individual tweets, and call process
+*/
 void TweetProcess::writeToBuffer(string input) { 
 
 	for(int i = 0; i < input.size(); i++) {
@@ -49,7 +54,11 @@ void TweetProcess::writeToBuffer(string input) {
 
 }
 
-//put strings into vector and generate score to be put in the database 
+/*
+ * Function: processTweet
+ * ---------------------
+ * put strings into vector and generate score to be put in the database 
+*/
 void TweetProcess::processTweet() {
 	string s = string(m_buffer, m_buffPlace);
 	m_tweets.push_back(s); 
@@ -72,10 +81,10 @@ void TweetProcess::processTweet() {
 }
 
 /*
-* Function: writeToDatabase
+ * Function: writeToDatabase
  * ---------------------
  * parse the topic of a tweet, and put that information into the database 
- */
+*/
  
 void TweetProcess::writeToDatabase(string tweet, string time, double score){
 
@@ -113,7 +122,7 @@ void TweetProcess::writeToDatabase(string tweet, string time, double score){
 }
 
 /*
-* Function: score_tweet
+ * Function: score_tweet
  * ---------------------
  * Scores a tweet based on the numbers of positive and negative words in the tweet,
  * returning the calculated score.
@@ -141,6 +150,12 @@ double TweetProcess::score_tweet(string tweet, map<string, double>& word_scores)
     return score;
 }
 
+/*
+ * Function: create_map
+ * ---------------------
+ * create word to score map for sentiment
+ * analysis
+*/
 map<string, double> TweetProcess::create_map() {
     map<string, double> word_scores;
     ifstream file("SentiWordNet_3.0.0_20130122.txt");
@@ -177,10 +192,22 @@ map<string, double> TweetProcess::create_map() {
     return word_scores;
 }
 
+/*
+ * Function: trim_word
+ * ---------------------
+ * trim words to fit in database? 
+ */
 string TweetProcess::trim_word(string untrimmed) {
     return untrimmed.substr(0, untrimmed.length() - 2);
 }
 
+/*
+ * Function: get_current_time
+ * ---------------------
+ * get the time to add tweets 
+ * change changing tweet string time to 
+ * proper format of current get_time 
+ */
 string TweetProcess::get_current_time() {
     using namespace boost::posix_time;
     ptime t = microsec_clock::universal_time(); 
