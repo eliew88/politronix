@@ -8,6 +8,9 @@
 #include <fstream>
 #include <map>
 #include <unordered_set>
+#include <time.h>
+//#include <stdio.h>
+//#include <locale.h>
 
 #include "mysql_connection.h"
 #include "mysql_driver.h"
@@ -63,9 +66,9 @@ void TweetProcess::processTweet() {
 	string s = string(m_buffer, m_buffPlace);
 	m_tweets.push_back(s); 
 	m_buffPlace = 0; 
-	//cout << s << endl << endl; 
-
-	//const string &body = r.body;
+	char finalTime[20]; 
+	int timeDiff; 
+	
     Json::Reader json_reader;
     Json::Value root_json;
     json_reader.parse(s, root_json, false);
@@ -77,7 +80,28 @@ void TweetProcess::processTweet() {
     double score = score_tweet(stat, m_sentiWordScores); 
     cout << stat << endl << score << endl << endl;
     cout << "Created at: " << createdTime << endl; 
-    writeToDatabase(stat, createdTime, score); 
+
+    //time stuff 
+    const char *timeChar = createdTime.c_str(); 
+    struct tm result, * ptm, * timeinfo;
+    time_t rawtime;
+
+    time ( &rawtime );
+    ptm = gmtime ( &rawtime );
+    timeinfo = localtime (&rawtime);
+    timeDiff = ptm->tm_hour - timeinfo->tm_hour; 
+
+    if(strptime(timeChar, "%a %b %d %T %z %Y", &result) == NULL) {
+    	cout << "issue creating time stamp";  
+    }
+    else {
+    	result.tm_hour += timeDiff; 
+    	strftime(finalTime,sizeof(finalTime), "%Y-%m-%d %T", &result);
+    }
+    	
+
+
+    writeToDatabase(stat, finalTime, score); 
 }
 
 /*
@@ -86,7 +110,7 @@ void TweetProcess::processTweet() {
  * parse the topic of a tweet, and put that information into the database 
 */
  
-void TweetProcess::writeToDatabase(string tweet, string time, double score){
+void TweetProcess::writeToDatabase(string tweet, string tweetTime, double score){
 
 	sql::mysql::MySQL_Driver *driver;
     sql::Connection *sql_conn;
@@ -110,7 +134,7 @@ void TweetProcess::writeToDatabase(string tweet, string time, double score){
             "INSERT INTO data(topic, score, datetime) VALUES ('"
             + topics[i] + "'," 
             + score_str + ", '"
-            + get_current_time() + "')";
+            + tweetTime + "')";
         cout << sql_statement << endl;
         stmt->execute(sql_statement);
 		}
