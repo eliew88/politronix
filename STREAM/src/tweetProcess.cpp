@@ -45,7 +45,7 @@ TweetProcess::TweetProcess() {
 */
 void TweetProcess::writeToBuffer(string input) { 
 
-	for(int i = 0; i < input.size(); i++) {
+	for (size_t i = 0; i < input.size(); i++) {
 		if(input[i] != '\r') {
 			m_buffer[m_buffPlace] = tolower(input[i]); 
 			m_buffPlace++; 
