@@ -2,8 +2,9 @@
 #include <stdlib.h>
 #include <oauth.h>
 #include <unistd.h>
-#include <string> 
+#include <string>
 #include <curl/curl.h>
+#include <stdio.h>
 
 #include "tweetProcess.h"
 
@@ -15,6 +16,7 @@ const char *consumer_secret = "VR6dnqif2EioPxYAJjpanBhncZRA32fbLAHdVUHZYyMTG1dY4
 const char *access_token = "753622605253320704-gljOrQ7CG5kX9ngOW8cWA9pmEeJhgPy";
 const char *access_token_secret = "EPyeeT8wPaFJWQpUOPB7unOVN8UKDIPCvnHogzp9GtADm";
 
+bool local;
 
 /* Function: handle_disconnect
  * Usage: handle_disconnect(curl_disconnect_error_code, n_disconnects)
@@ -34,75 +36,82 @@ const char *access_token_secret = "EPyeeT8wPaFJWQpUOPB7unOVN8UKDIPCvnHogzp9GtADm
  */
 
 /*
-void sleepmil(int n_millisecs) {
-    usleep(n_millisecs * 1000);
-}
+   void sleepmil(int n_millisecs) {
+   usleep(n_millisecs * 1000);
+   }
 
-bool handle_disconnect(int error_code, int n_disconnects) {
-    if(error_code == 500) {
-        int sleep_time = 250 * (n_disconnects + 1);
-        sleepmil(min(sleep_time, 16*1000));
-        return true;
-    } else if(error_code > 500) {
-        int sleep_time = (5*1000) * pow(2, n_disconnects);
-        sleepmil(min(sleep_time, 5*60*1000));
-        return true;
-    } else if(error_code >= 420 && error_code <= 429) {
-        int sleep_time = (1*1000) * pow(2, n_disconnects);
-        sleepmil(sleep_time);
-        return true;
-    } else {
-        return false;
-    }
-}
-*/
+   bool handle_disconnect(int error_code, int n_disconnects) {
+   if(error_code == 500) {
+   int sleep_time = 250 * (n_disconnects + 1);
+   sleepmil(min(sleep_time, 16*1000));
+   return true;
+   } else if(error_code > 500) {
+   int sleep_time = (5*1000) * pow(2, n_disconnects);
+   sleepmil(min(sleep_time, 5*60*1000));
+   return true;
+   } else if(error_code >= 420 && error_code <= 429) {
+   int sleep_time = (1*1000) * pow(2, n_disconnects);
+   sleepmil(sleep_time);
+   return true;
+   } else {
+   return false;
+   }
+   }
+   */
 
 //called everytime new input is recieved, calls member function to parse input into tweets
 size_t tweet_callback(char *ptr, size_t size, size_t nmemb, void *userdata) {
-    
-    size_t total = size * nmemb; 
-    string str = string(ptr, total); 
-    TweetProcess *tweets = reinterpret_cast<TweetProcess*>(userdata); 
-    tweets->writeToBuffer(str); 
 
-    return total; 
+	size_t total = size * nmemb; 
+	string str = string(ptr, total); 
+	TweetProcess *tweets = reinterpret_cast<TweetProcess*>(userdata); 
+	tweets->writeToBuffer(str, local); 
+
+	return total; 
 }
 
 
 int main(int argc, char *argv[]) {
+	// Sets local flag if command line argument "local" is included so that local MySQL database is used
+	if (argv[1] != NULL) {    
+		string localflag(argv[1]);
+		local = (localflag == "local");
+	} else {
+		local = false;
+	}
+	//local = false;
+	TweetProcess *tweets = new TweetProcess; 
+	const char *url = "https://stream.twitter.com/1.1/statuses/sample.json";
+	char *signedurl = oauth_sign_url2(url, NULL, OA_HMAC, "GET", consumer_key, consumer_secret, access_token, access_token_secret);
 
-    TweetProcess *tweets = new TweetProcess; 
-    const char *url = "https://stream.twitter.com/1.1/statuses/sample.json";
-    char *signedurl = oauth_sign_url2(url, NULL, OA_HMAC, "GET", consumer_key, consumer_secret, access_token, access_token_secret);
+	curl_global_init(CURL_GLOBAL_ALL);
+	CURL *curl = curl_easy_init();
 
-    curl_global_init(CURL_GLOBAL_ALL);
-    CURL *curl = curl_easy_init();
+	// URL we're connecting to
+	curl_easy_setopt(curl, CURLOPT_URL, signedurl);
 
-    // URL we're connecting to
-    curl_easy_setopt(curl, CURLOPT_URL, signedurl);
-    
-    // User agent we're going to use, fill this in appropriately
-    curl_easy_setopt(curl, CURLOPT_USERAGENT, "Politronix/0.1"); 
-    
-    // libcurl will now fail on an HTTP error (>=400)
-    curl_easy_setopt(curl, CURLOPT_FAILONERROR, 1);
-    
-    // In this case, we're not specifying a callback function for
-    // handling received data, so libcURL will use the default, which
-    // is to write to the file specified in WRITEDATA
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, tweets);
+	// User agent we're going to use, fill this in appropriately
+	curl_easy_setopt(curl, CURLOPT_USERAGENT, "Politronix/0.1"); 
 
-    //when data comes it, this calls our write_callback function 
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, tweet_callback); 
+	// libcurl will now fail on an HTTP error (>=400)
+	curl_easy_setopt(curl, CURLOPT_FAILONERROR, 1);
+
+	// In this case, we're not specifying a callback function for
+	// handling received data, so libcURL will use the default, which
+	// is to write to the file specified in WRITEDATA
+	curl_easy_setopt(curl, CURLOPT_WRITEDATA, tweets);
+
+	//when data comes it, this calls our write_callback function 
+	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, tweet_callback); 
 
 
-    
-    // Execute the request!
-    int curlstatus = curl_easy_perform(curl);
-    printf("curl_easy_perform terminated with status code %d\n", curlstatus);
-    
-    curl_easy_cleanup(curl);
-    curl_global_cleanup();
-    
-    return 0;
+
+	// Execute the request!
+	int curlstatus = curl_easy_perform(curl);
+	printf("curl_easy_perform terminated with status code %d\n", curlstatus);
+
+	curl_easy_cleanup(curl);
+	curl_global_cleanup();
+
+	return 0;
 }
