@@ -37,20 +37,22 @@ TweetProcess::TweetProcess() {
 /*
  * Function: writeToBuffer
  * ---------------------
- * break input string into individual tweets, and call process
+ * break input string into individual tweets, and call process. Returns the number of 
+ * tweets processed. 
  */
-void TweetProcess::writeToBuffer(string input, bool local) { 
-
+int TweetProcess::writeToBuffer(string input, bool local) { 
+	int tweet_count = 0;
 	for (size_t i = 0; i < input.size(); i++) {
 		if(input[i] != '\r') {
 			m_buffer[m_buffPlace] = tolower(input[i]); 
 			m_buffPlace++; 
 		}
 		else {
-			processTweet(local); 
+			processTweet(local);
+			tweet_count++; 
 		}
 	}
-
+	return tweet_count;
 }
 
 /*
@@ -69,9 +71,11 @@ void TweetProcess::processTweet(bool local) {
 	Json::Value root_json;
 	json_reader.parse(s, root_json, false);
 	Json::Value status = root_json["text"];
-	Json::Value created_at = root_json["created_at"]; 
+	Json::Value created_at = root_json["created_at"];
+	Json::Value lang = root_json["lang"]; 
 	string stat = status.asString(); 
 	string createdTime = created_at.asString(); 
+	string language = lang.asString();	
 
 	double score = score_tweet(stat, m_sentiWordScores); 
 	//cout << stat << endl << score << endl << endl;
@@ -96,9 +100,23 @@ void TweetProcess::processTweet(bool local) {
 		strftime(finalTime,sizeof(finalTime), "%Y-%m-%d %T", &result);
 	}
 
+	if (language == "en") {
+		writeToTrainingFile(stat);
+		writeToDatabase(stat, finalTime, score, local); 
+	}
+}
 
-
-	writeToDatabase(stat, finalTime, score, local); 
+/* Function: writeToTrainingFile
+ * -----------------------------
+ * Writes a tweet to a file storing a large collection of tweets, which
+ * will be used for training correlation algorithm.
+ */
+void TweetProcess::writeToTrainingFile(string tweet) {
+	ofstream training_file;
+	training_file.open("training_file.txt", std::ios_base::app);
+	training_file.seekp(0, ios::end);
+	training_file << tweet << endl;
+	training_file.close();
 }
 
 /*
@@ -125,7 +143,7 @@ void TweetProcess::writeToDatabase(string tweet, string tweetTime, double score,
 	}
 	stmt = sql_conn->createStatement();
 	int topicSize = 11; 
-	string topics[11] = {"clinton", "trump", "donald", "hillary", "democrat", "republican", "election", "gary", "gohnson", "jill", "stein"}; 
+	string topics[12] = {"clinton", "trump", "donald", "hillary", "democrat", "republican", "election", "gary", "johnson", "jill", "stein", "kaepernick"}; 
 	size_t pos;
 	for(int i = 0; i < topicSize; i++) {
 		pos = tweet.find(topics[i]); 
