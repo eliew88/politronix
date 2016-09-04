@@ -5,7 +5,7 @@
 
 CC=g++
 LDFLAGS=  -L/usr/local/opt/curl/lib
-CPPFLAGS= -Wall -std=c++11 -Icurlcpp/include -I/usr/local/opt/curl/include -I/usr/local/include
+CPPFLAGS= -Wall -std=c++11 -Icurlcpp/include -I/usr/local/opt/curl/include -I/usr/local/include -D_GLIBCXX_USE_CXX11_ABI=1
 
 SOURCEDIR=src
 BUILDDIR=build
