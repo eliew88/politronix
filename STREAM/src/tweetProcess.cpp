@@ -101,7 +101,7 @@ void TweetProcess::processTweet(bool local) {
 	}
 
 	if (language == "en") {
-		writeToTrainingFile(stat);
+		//writeToTrainingFile(stat);
 		writeToDatabase(stat, finalTime, score, local); 
 	}
 }
