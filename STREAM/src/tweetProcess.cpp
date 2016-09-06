@@ -73,7 +73,6 @@ double TopicStatus::get_average() {
 	}
 	double total = 0;
 	int size = tweet_scores.size();
-	cout << "queue size: " << size << endl;
 	for (int i = 0; i < size; i++) {
 		TweetScore s = tweet_scores.front();
 		tweet_scores.pop();
@@ -252,7 +251,6 @@ void TweetProcess::writeToTrainingFile(string tweet) {
  */
 
 void TweetProcess::writeToDatabase(string topic, string time, double average_score, bool local) {
-	cout << "WRITING TO DATABASE!" << endl;
 	sql::mysql::MySQL_Driver *driver;
 	sql::Connection *sql_conn;
 	sql::Statement *stmt;
