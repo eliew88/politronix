@@ -1,28 +1,87 @@
 #include <math.h>
 #include <stdlib.h>
 #include <oauth.h>
-#include <unistd.h>
 #include <string> 
 #include <vector> 
 #include <iostream>
 #include <fstream>
 #include <map>
+#include <queue>
 #include <unordered_set>
-#include <time.h>
-//#include <stdio.h>
-//#include <locale.h>
 
 #include "mysql_connection.h"
 #include "mysql_driver.h"
 #include <cppconn/driver.h>
 #include <cppconn/exception.h>
 #include <cppconn/statement.h>
-#include <boost/date_time/posix_time/posix_time.hpp>
 #include "json/json.h"
 
 #include "tweetProcess.h"
 
 using namespace std;
+using namespace boost::posix_time;
+
+/* Constructor: TopicStatus
+ * -----------------------
+ */
+TopicStatus::TopicStatus() {
+	last_written_time = microsec_clock::universal_time();
+}
+
+/* Function: add_tweet
+ * --------------------
+ *  Adds a TweetScore struct to the TopicStatus for a given
+ *  topic.
+ */
+void TopicStatus::add_tweet(double score) {
+	ptime tweet_time = microsec_clock::universal_time();
+	TweetScore ts = {score, tweet_time};
+	tweet_scores.push(ts);
+}
+
+/* Function: should_write
+ * ----------------------
+ * Checks whether it is time for the topic to be written
+ * to the database, based on data in TopicStatus
+ */
+bool TopicStatus::should_write() {
+	ptime curr = microsec_clock::universal_time();
+	ptime one_min_ago = curr - minutes(1);
+	return last_written_time < one_min_ago;
+}
+
+/* Function: update_time
+ * ---------------------
+ * Updates the last written time in TopicStatus to be the
+ * current time (only called when writing to database).
+ */
+void TopicStatus::reset() {
+	last_written_time = microsec_clock::universal_time();
+}
+
+/* Function: get_average
+ * ---------------------
+ * Gets the average of all the tweet scores for a given topic in
+ * TopicStatus. Discards all tweets that are older than 10 minutes.
+ */
+double TopicStatus::get_average() {
+	ptime ten_mins_ago = microsec_clock::universal_time() - minutes(10);
+	TweetScore front = tweet_scores.front();
+	while (front.time < ten_mins_ago) {
+		tweet_scores.pop();
+		front = tweet_scores.front();
+	}
+	double total = 0;
+	int size = tweet_scores.size();
+	cout << "queue size: " << size << endl;
+	for (int i = 0; i < size; i++) {
+		TweetScore s = tweet_scores.front();
+		tweet_scores.pop();
+		total += s.score;
+		tweet_scores.push(s);
+	}
+	return total / size;
+}
 
 /*
  * Function: Constructor
@@ -31,7 +90,36 @@ using namespace std;
  */
 TweetProcess::TweetProcess() {
 	m_buffPlace = 0; 
-	m_sentiWordScores = create_map(); 
+	m_sentiWordScores = create_map();
+	word_to_topic = create_topic_map();
+	initialize_statuses();
+}
+
+/* Function: initialize_statuses
+ * -----------------------------
+ * Initializes the topic to status map to have empty statuses
+ * for each topic. 
+ */
+void TweetProcess::initialize_statuses() {
+	TopicStatus *clinton = new TopicStatus;
+        TopicStatus *trump = new TopicStatus;
+        topic_to_status["clinton"] = clinton;
+        topic_to_status["trump"] = trump;
+}
+
+/* Function: create_topic_map
+ * -------------------------
+ *  Creates the map that maps words to topics
+ */
+unordered_map<string, string> TweetProcess::create_topic_map() {
+	unordered_map<string, string> map;
+	map["hillary"] = "clinton";
+	map["clinton"] = "clinton";
+	map["#imwithher"] = "clinton";
+	map["trump"] = "trump";
+	map["donald"] = "trump";
+	map["@realdonaldtrump"] = "trump";
+	return map;
 }
 
 /*
@@ -102,8 +190,46 @@ void TweetProcess::processTweet(bool local) {
 
 	if (language == "en") {
 		//writeToTrainingFile(stat);
-		writeToDatabase(stat, finalTime, score, local); 
+
+		unordered_set<string> topics = find_topics(stat);
+		for (string topic : topics) {
+			cout << "New tweet found for " << topic << ". Updating topic status..." << endl;
+			update_topic(stat, finalTime, score, topic, local);
+		}
 	}
+}
+
+/* Function: update_topic
+ * ----------------------
+ * Updates the TopicStatus associated with a given topic, and 
+ * writes to the database if necessary.
+ */
+void TweetProcess::update_topic(string tweet, string tweet_time, double score, string topic, bool local) {
+	TopicStatus *status = topic_to_status[topic];
+	status->add_tweet(score);
+	if (status->should_write()) {
+		// average scores for that topic, then write to database
+		double score = status->get_average();
+		writeToDatabase(topic, tweet_time, score, local);
+		status->reset();
+	}
+}
+
+
+/* Function: find_topics
+ * ---------------------
+ * Takes in a tweet as input and returns a set of all the topics addressed
+ * in the tweet.
+ */
+unordered_set<string> TweetProcess::find_topics(string tweet) {
+	unordered_set<string> topics;
+	for (auto it = word_to_topic.begin(); it != word_to_topic.end(); ++it) {
+		size_t pos = tweet.find(it->first);
+		if (pos != std::string::npos) {
+			topics.insert(it->second);
+		}
+	}
+	return topics;
 }
 
 /* Function: writeToTrainingFile
@@ -122,11 +248,11 @@ void TweetProcess::writeToTrainingFile(string tweet) {
 /*
  * Function: writeToDatabase
  * ---------------------
- * parse the topic of a tweet, and put that information into the database 
+ * Writes the most recent smoothed average of tweets for a topic to the database. 
  */
 
-void TweetProcess::writeToDatabase(string tweet, string tweetTime, double score, bool local){
-
+void TweetProcess::writeToDatabase(string topic, string time, double average_score, bool local) {
+	cout << "WRITING TO DATABASE!" << endl;
 	sql::mysql::MySQL_Driver *driver;
 	sql::Connection *sql_conn;
 	sql::Statement *stmt;
@@ -142,24 +268,14 @@ void TweetProcess::writeToDatabase(string tweet, string tweetTime, double score,
 		stmt->execute("USE politronix_database");
 	}
 	stmt = sql_conn->createStatement();
-	int topicSize = 11; 
-	string topics[12] = {"clinton", "trump", "donald", "hillary", "democrat", "republican", "election", "gary", "johnson", "jill", "stein", "kaepernick"}; 
-	size_t pos;
-	for(int i = 0; i < topicSize; i++) {
-		pos = tweet.find(topics[i]); 
-		if (pos != std::string::npos){
-			string score_str = to_string(score);
-			string sql_statement = 
-				"INSERT INTO data(topic, score, datetime) VALUES ('"
-				+ topics[i] + "'," 
-				+ score_str + ", '"
-				+ tweetTime + "')";
-			cout << sql_statement << endl;
-			stmt->execute(sql_statement);
-		}
-	}
-
-
+	string score_str = to_string(average_score);
+	string sql_statement = 
+		"INSERT INTO data(topic, score, datetime) VALUES ('"
+		+ topic + "'," 
+		+ score_str + ", '"
+		+ time + "')";
+	cout << sql_statement << endl;
+	stmt->execute(sql_statement);
 	delete stmt;
 	delete sql_conn;
 }
@@ -231,7 +347,6 @@ map<string, double> TweetProcess::create_map() {
 
 		getline(file, entry);
 	}
-	// print_map(word_scores);
 	return word_scores;
 }
 
@@ -252,7 +367,6 @@ string TweetProcess::trim_word(string untrimmed) {
  * proper format of current get_time 
  */
 string TweetProcess::get_current_time() {
-	using namespace boost::posix_time;
 	ptime t = microsec_clock::universal_time(); 
 	return to_iso_extended_string(t);
 }
