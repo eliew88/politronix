@@ -1,6 +1,8 @@
 #include <vector>
 #include <map>
 #include <string>
+#include "textUtils.h"
+#include <set>
 
 class TwitterAnalysis {
 	public:
@@ -13,5 +15,8 @@ class TwitterAnalysis {
 	private:
 		std::map<std::string, double> word_counts;
 		std::vector<std::map<std::string, double> > bags;		
+        TextUtils *tu;
+        std::set<std::string> positive_seed_words;
+        std::set<std::string> negative_seed_words;
 
 };
