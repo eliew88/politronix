@@ -44,6 +44,7 @@ void sleepmil(int n_millisecs) {
 }
 
 bool handle_disconnect(int error_code, int n_disconnects) {
+	/*
 	if(error_code == 500) {
 		int sleep_time = 250 * (n_disconnects + 1);
 		sleepmil(min(sleep_time, 16*1000));
@@ -56,9 +57,16 @@ bool handle_disconnect(int error_code, int n_disconnects) {
 		int sleep_time = (1*1000) * pow(2, n_disconnects);
 		sleepmil(sleep_time);
 		return true;
+	} else if (error_code == 18) {
+		sleepmil(30000);
+		return true;
 	} else {
 		return false;
 	}
+	*/
+
+	sleepmil(60000);
+	return true;
 }
 
 //called everytime new input is recieved, calls member function to parse input into tweets
@@ -123,6 +131,19 @@ int main(int argc, char *argv[]) {
 			printf("curl error could not be handled: Error Code %i:Streaming terminating...\n ", curlstatus);
 			break;
 		}
+		curl = curl_easy_init();
+		// URL we're connecting to
+		curl_easy_setopt(curl, CURLOPT_URL, signedurl);
+		// User agent we're going to use, fill this in appropriately
+		curl_easy_setopt(curl, CURLOPT_USERAGENT, "Politronix/0.1");
+		// libcurl will now fail on an HTTP error (>=400)
+		curl_easy_setopt(curl, CURLOPT_FAILONERROR, 1);
+		// In this case, we're not specifying a callback function for
+		// handling received data, so libcURL will use the default, wh
+		// is to write to the file specified in WRITEDATA
+		curl_easy_setopt(curl, CURLOPT_WRITEDATA, tweets);
+		// when data comes it, this calls our write_callback function 
+		// curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, tweet_callback);
 		curlstatus = curl_easy_perform(curl);
 	}
 

@@ -102,8 +102,20 @@ TweetProcess::TweetProcess() {
 void TweetProcess::initialize_statuses() {
 	TopicStatus *clinton = new TopicStatus;
         TopicStatus *trump = new TopicStatus;
+	TopicStatus *johnson = new TopicStatus;
+	TopicStatus *stein = new TopicStatus;
+	TopicStatus *pence = new TopicStatus;
+	TopicStatus *kaine = new TopicStatus;
+	TopicStatus *democrat = new TopicStatus;
+	TopicStatus *republican = new TopicStatus;
         topic_to_status["clinton"] = clinton;
         topic_to_status["trump"] = trump;
+	topic_to_status["johnson"] = johnson;
+	topic_to_status["stein"] = stein;
+	topic_to_status["pence"] = pence;
+	topic_to_status["kaine"] = kaine;
+	topic_to_status["democrat"] = democrat;
+	topic_to_status["republican"] = republican;
 }
 
 /* Function: create_topic_map
@@ -115,9 +127,24 @@ unordered_map<string, string> TweetProcess::create_topic_map() {
 	map["hillary"] = "clinton";
 	map["clinton"] = "clinton";
 	map["#imwithher"] = "clinton";
+	map["#crookedhillary"] = "clinton";
+	map["@hillaryclinton"] = "clinton";
 	map["trump"] = "trump";
 	map["donald"] = "trump";
 	map["@realdonaldtrump"] = "trump";
+	map["#makeamericagreatagain"] = "trump";
+	map["@govgaryjohnson"] = "johnson";
+	map["@drjillstein"] = "stein";
+	map["stein"] = "stein";
+	map["pence"] = "pence";
+	map["@mike_pence"] = "pence";
+	map["kaine"] = "kaine";
+	map["@timkaine"] = "kaine";
+	map["democrat"] = "democrat";
+	map["republican"] = "republican";
+	map["@thedemocrats"] = "democrat";
+	map["@gop"] = "republican";
+	
 	return map;
 }
 
@@ -188,7 +215,7 @@ void TweetProcess::processTweet(bool local) {
 	}
 
 	if (language == "en") {
-		//writeToTrainingFile(stat);
+		writeToTrainingFile(stat);
 
 		unordered_set<string> topics = find_topics(stat);
 		for (string topic : topics) {
