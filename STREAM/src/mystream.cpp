@@ -56,6 +56,8 @@ bool handle_disconnect(int error_code, int n) {
 	} else if (error_code >= 420 && error_code <= 499) {
 		int sleep_time = (1*1000) * pow(2, n);
 		sleepmil(sleep_time);
+	} else if (error_code == 200) {
+		sleepmil(10000);
 	} else {
 		return false;
 	}
@@ -90,13 +92,9 @@ int main(int argc, char *argv[]) {
 	}
 	TweetProcess *tweets = new TweetProcess; 
 	const char *url = "https://stream.twitter.com/1.1/statuses/sample.json";
-	char *signedurl = oauth_sign_url2(url, NULL, OA_HMAC, "GET", consumer_key, consumer_secret, access_token, access_token_secret);
 
 	curl_global_init(CURL_GLOBAL_ALL);
 	CURL *curl = curl_easy_init();
-
-	// URL we're connecting to
-	curl_easy_setopt(curl, CURLOPT_URL, signedurl);
 
 	// User agent we're going to use, fill this in appropriately
 	curl_easy_setopt(curl, CURLOPT_USERAGENT, "Politronix/0.1"); 
@@ -117,6 +115,8 @@ int main(int argc, char *argv[]) {
 	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, tweet_callback);	
 
 	while (true) {
+		char *signedurl = oauth_sign_url2(url, NULL, OA_HMAC, "GET", consumer_key, consumer_secret, access_token, access_token_secret);
+		curl_easy_setopt(curl, CURLOPT_URL, signedurl);
 		// Execute the request!
 		int curlstatus = curl_easy_perform(curl);
 		printf("curl_easy_perform terminated with status code %d\n", curlstatus);

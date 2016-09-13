@@ -25,7 +25,7 @@ using namespace boost::posix_time;
  * -----------------------
  */
 TopicStatus::TopicStatus() {
-	last_written_time = microsec_clock::universal_time();
+	initialize_sample_sets();
 }
 
 /* Function: add_tweet
@@ -44,10 +44,10 @@ void TopicStatus::add_tweet(double score) {
  * Checks whether it is time for the topic to be written
  * to the database, based on data in TopicStatus
  */
-bool TopicStatus::should_write() {
+bool TopicStatus::should_write(SampleSet s) {
 	ptime curr = microsec_clock::universal_time();
-	ptime one_min_ago = curr - minutes(1);
-	return last_written_time < one_min_ago;
+	ptime interval = curr - seconds(s.seconds_between_writes);
+	return s.last_written_time < interval;
 }
 
 /* Function: update_time
@@ -55,8 +55,27 @@ bool TopicStatus::should_write() {
  * Updates the last written time in TopicStatus to be the
  * current time (only called when writing to database).
  */
-void TopicStatus::reset() {
-	last_written_time = microsec_clock::universal_time();
+void TopicStatus::reset(SampleSet s) {
+	s.last_written_time = microsec_clock::universal_time();
+}
+
+/* Function: initialize_sample_sets
+ * --------------------------------
+ * Initializes the TopicStatus to have the correct vector of sample
+ * sets.
+ */
+void TopicStatus::initialize_sample_sets() {
+	ptime now = microsec_clock::universal_time();
+	SampleSet one = {now, 60, 10, 0};
+	sample_sets.push_back(one);
+	SampleSet two = {now, 300, 30, 0};
+	sample_sets.push_back(two);
+	SampleSet three = {now, 1200, 60, 0};
+	sample_sets.push_back(three);
+	SampleSet four = {now, 8000, 360, 0};
+	sample_sets.push_back(four);
+	SampleSet five = {now, 32000, 1400, 0};
+	sample_sets.push_back(five);
 }
 
 /* Function: get_average
@@ -64,22 +83,30 @@ void TopicStatus::reset() {
  * Gets the average of all the tweet scores for a given topic in
  * TopicStatus. Discards all tweets that are older than 10 minutes.
  */
-double TopicStatus::get_average() {
-	ptime ten_mins_ago = microsec_clock::universal_time() - minutes(10);
+void TopicStatus::update_averages() {
+	ptime now = microsec_clock::universal_time();
+	ptime twelve_hours_ago = now - hours(12);
 	TweetScore front = tweet_scores.front();
-	while (front.time < ten_mins_ago) {
+	while (front.time < twelve_hours_ago) {
 		tweet_scores.pop();
 		front = tweet_scores.front();
 	}
-	double total = 0;
-	int size = tweet_scores.size();
-	for (int i = 0; i < size; i++) {
-		TweetScore s = tweet_scores.front();
-		tweet_scores.pop();
-		total += s.score;
-		tweet_scores.push(s);
+
+	for (SampleSet s : sample_sets) {
+		double total = 0;
+		int count = 0;
+		int size = tweet_scores.size();
+		for (int i = 0; i < size; i++) {
+			TweetScore ts = tweet_scores.front();
+			tweet_scores.pop();
+			if (ts.time >= now - minutes(s.minutes_to_average)) {
+				total += ts.score;
+				count++;
+			}
+			tweet_scores.push(ts);
+		}
+		s.curr_avg = total / count;
 	}
-	return total / size;
 }
 
 /*
@@ -100,22 +127,27 @@ TweetProcess::TweetProcess() {
  * for each topic. 
  */
 void TweetProcess::initialize_statuses() {
-	TopicStatus *clinton = new TopicStatus;
-        TopicStatus *trump = new TopicStatus;
-	TopicStatus *johnson = new TopicStatus;
-	TopicStatus *stein = new TopicStatus;
-	TopicStatus *pence = new TopicStatus;
-	TopicStatus *kaine = new TopicStatus;
-	TopicStatus *democrat = new TopicStatus;
-	TopicStatus *republican = new TopicStatus;
-        topic_to_status["clinton"] = clinton;
-        topic_to_status["trump"] = trump;
-	topic_to_status["johnson"] = johnson;
-	topic_to_status["stein"] = stein;
-	topic_to_status["pence"] = pence;
-	topic_to_status["kaine"] = kaine;
-	topic_to_status["democrat"] = democrat;
-	topic_to_status["republican"] = republican;
+	string statuses[] = {"clinton", "trump", "johnson", "stein", "pence", "kaine", "democrat", "republican"};
+	for (string status : statuses) {
+		topic_to_status[status] = new TopicStatus;
+		topic_to_status[status]->initialize_sample_sets();
+	}
+	/*TopicStatus *clinton = new TopicStatus;
+	  TopicStatus *trump = new TopicStatus;
+	  TopicStatus *johnson = new TopicStatus;
+	  TopicStatus *stein = new TopicStatus;
+	  TopicStatus *pence = new TopicStatus;
+	  TopicStatus *kaine = new TopicStatus;
+	  TopicStatus *democrat = new TopicStatus;
+	  TopicStatus *republican = new TopicStatus;
+	  topic_to_status["clinton"] = clinton;
+	  topic_to_status["trump"] = trump;
+	  topic_to_status["johnson"] = johnson;
+	  topic_to_status["stein"] = stein;
+	  topic_to_status["pence"] = pence;
+	  topic_to_status["kaine"] = kaine;
+	  topic_to_status["democrat"] = democrat;
+	  topic_to_status["republican"] = republican;*/
 }
 
 /* Function: create_topic_map
@@ -144,7 +176,7 @@ unordered_map<string, string> TweetProcess::create_topic_map() {
 	map["republican"] = "republican";
 	map["@thedemocrats"] = "democrat";
 	map["@gop"] = "republican";
-	
+
 	return map;
 }
 
@@ -233,11 +265,13 @@ void TweetProcess::processTweet(bool local) {
 void TweetProcess::update_topic(string tweet, string tweet_time, double score, string topic, bool local) {
 	TopicStatus *status = topic_to_status[topic];
 	status->add_tweet(score);
-	if (status->should_write()) {
-		// average scores for that topic, then write to database
-		double score = status->get_average();
-		writeToDatabase(topic, tweet_time, score, local);
-		status->reset();
+	for (SampleSet s : status->sample_sets) {
+		if (status->should_write(s)) {
+			// average scores for that topic, then write to database
+			status->update_averages();
+			writeToDatabase(topic, tweet_time, s.curr_avg, local);
+			status->reset(s);
+		}
 	}
 }
 

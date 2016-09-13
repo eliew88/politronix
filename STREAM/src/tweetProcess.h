@@ -10,25 +10,33 @@
 
 #define NUM_TWEETS_SMOOTHING 100
 
+typedef struct {
+	boost::posix_time::ptime last_written_time; //last time written to database
+	int seconds_between_writes;
+	int minutes_to_average;
+	double curr_avg;
+} SampleSet;
+
 class TopicStatus {
 
-        typedef struct {
-                double score;
-                boost::posix_time::ptime time;
-        } TweetScore;
+	typedef struct {
+		double score;
+		boost::posix_time::ptime time;
+	} TweetScore;
 
-        public:
+	public:
 		TopicStatus();
 		void add_tweet(double score);
-		bool should_write();
-		void reset();
-		double get_average();
-                std::queue<TweetScore> tweet_scores; //all tweets since last write
-                boost::posix_time::ptime last_written_time; //last time written to database
+		bool should_write(SampleSet s);
+		void reset(SampleSet s);
+		void update_averages();
+		void initialize_sample_sets();
+		std::queue<TweetScore> tweet_scores; //all tweets since last write
+		std::vector<SampleSet> sample_sets;
 };
 
 class TweetProcess { 
-	
+
 	public: 
 		TweetProcess();
 		void initialize_statuses();
