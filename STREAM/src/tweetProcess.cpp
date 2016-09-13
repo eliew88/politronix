@@ -44,7 +44,7 @@ void TopicStatus::add_tweet(double score) {
  * Checks whether it is time for the topic to be written
  * to the database, based on data in TopicStatus
  */
-bool TopicStatus::should_write(SampleSet s) {
+bool TopicStatus::should_write(SampleSet &s) {
 	ptime curr = microsec_clock::universal_time();
 	ptime interval = curr - seconds(s.seconds_between_writes);
 	return s.last_written_time < interval;
@@ -55,7 +55,7 @@ bool TopicStatus::should_write(SampleSet s) {
  * Updates the last written time in TopicStatus to be the
  * current time (only called when writing to database).
  */
-void TopicStatus::reset(SampleSet s) {
+void TopicStatus::reset(SampleSet &s) {
 	s.last_written_time = microsec_clock::universal_time();
 }
 
@@ -83,7 +83,7 @@ void TopicStatus::initialize_sample_sets() {
  * Gets the average of all the tweet scores for a given topic in
  * TopicStatus. Discards all tweets that are older than 10 minutes.
  */
-void TopicStatus::update_averages() {
+void TopicStatus::update_average(SampleSet &s) {
 	ptime now = microsec_clock::universal_time();
 	ptime twelve_hours_ago = now - hours(12);
 	TweetScore front = tweet_scores.front();
@@ -92,21 +92,19 @@ void TopicStatus::update_averages() {
 		front = tweet_scores.front();
 	}
 
-	for (SampleSet s : sample_sets) {
-		double total = 0;
-		int count = 0;
-		int size = tweet_scores.size();
-		for (int i = 0; i < size; i++) {
-			TweetScore ts = tweet_scores.front();
-			tweet_scores.pop();
-			if (ts.time >= now - minutes(s.minutes_to_average)) {
-				total += ts.score;
-				count++;
-			}
-			tweet_scores.push(ts);
+	double total = 0;
+	double count = 0;
+	int size = tweet_scores.size();
+	for (int i = 0; i < size; i++) {
+		TweetScore ts = tweet_scores.front();
+		tweet_scores.pop();
+		if (ts.time >= now - minutes(s.minutes_to_average)) {
+			total += ts.score;
+			count++;
 		}
-		s.curr_avg = total / count;
+		tweet_scores.push(ts);
 	}
+	s.curr_avg = total / count;
 }
 
 /*
@@ -130,7 +128,6 @@ void TweetProcess::initialize_statuses() {
 	string statuses[] = {"clinton", "trump", "johnson", "stein", "pence", "kaine", "democrat", "republican"};
 	for (string status : statuses) {
 		topic_to_status[status] = new TopicStatus;
-		topic_to_status[status]->initialize_sample_sets();
 	}
 	/*TopicStatus *clinton = new TopicStatus;
 	  TopicStatus *trump = new TopicStatus;
@@ -265,11 +262,11 @@ void TweetProcess::processTweet(bool local) {
 void TweetProcess::update_topic(string tweet, string tweet_time, double score, string topic, bool local) {
 	TopicStatus *status = topic_to_status[topic];
 	status->add_tweet(score);
-	for (SampleSet s : status->sample_sets) {
+	for (SampleSet &s : status->sample_sets) {
 		if (status->should_write(s)) {
 			// average scores for that topic, then write to database
-			status->update_averages();
-			writeToDatabase(topic, tweet_time, s.curr_avg, local);
+			status->update_average(s);
+			writeToDatabase(topic, tweet_time, s.curr_avg, local, s.seconds_between_writes);
 			status->reset(s);
 		}
 	}
@@ -311,7 +308,7 @@ void TweetProcess::writeToTrainingFile(string tweet) {
  * Writes the most recent smoothed average of tweets for a topic to the database. 
  */
 
-void TweetProcess::writeToDatabase(string topic, string time, double average_score, bool local) {
+void TweetProcess::writeToDatabase(string topic, string time, double average_score, bool local, int write_interval) {
 	sql::mysql::MySQL_Driver *driver;
 	sql::Connection *sql_conn;
 	sql::Statement *stmt;
@@ -328,11 +325,13 @@ void TweetProcess::writeToDatabase(string topic, string time, double average_sco
 	}
 	stmt = sql_conn->createStatement();
 	string score_str = to_string(average_score);
+	string interval_str = to_string(write_interval);
 	string sql_statement = 
-		"INSERT INTO data(topic, score, datetime) VALUES ('"
-		+ topic + "'," 
+		"INSERT INTO data(topic, score, datetime, writeinterval) VALUES ('"
+		+ topic + "', " 
 		+ score_str + ", '"
-		+ time + "')";
+		+ time + "', "
+		+ interval_str + ")";
 	cout << sql_statement << endl;
 	stmt->execute(sql_statement);
 	delete stmt;

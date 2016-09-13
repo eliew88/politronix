@@ -27,9 +27,9 @@ class TopicStatus {
 	public:
 		TopicStatus();
 		void add_tweet(double score);
-		bool should_write(SampleSet s);
-		void reset(SampleSet s);
-		void update_averages();
+		bool should_write(SampleSet &s);
+		void reset(SampleSet &s);
+		void update_average(SampleSet &s);
 		void initialize_sample_sets();
 		std::queue<TweetScore> tweet_scores; //all tweets since last write
 		std::vector<SampleSet> sample_sets;
@@ -49,7 +49,7 @@ class TweetProcess {
 		std::unordered_set<std::string> find_topics(std::string tweet);
 		void update_topic(std::string tweet, std::string tweet_time, double score, std::string topic, bool local);
 		void writeToTrainingFile(std::string tweet);
-		void writeToDatabase(std::string tweet, std::string tweetTime, double score, bool local); 
+		void writeToDatabase(std::string tweet, std::string tweetTime, double score, bool local, int write_interval); 
 		std::string get_current_time(); 
 
 	private: 
