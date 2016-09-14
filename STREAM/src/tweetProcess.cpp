@@ -95,6 +95,7 @@ void TopicStatus::update_average(SampleSet &s) {
 	double total = 0;
 	double count = 0;
 	int size = tweet_scores.size();
+	cout << "Queue size: " << size << endl;
 	for (int i = 0; i < size; i++) {
 		TweetScore ts = tweet_scores.front();
 		tweet_scores.pop();
@@ -244,7 +245,7 @@ void TweetProcess::processTweet(bool local) {
 	}
 
 	if (language == "en") {
-		writeToTrainingFile(stat);
+		//writeToTrainingFile(stat);
 
 		unordered_set<string> topics = find_topics(stat);
 		for (string topic : topics) {
