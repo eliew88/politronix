@@ -10,6 +10,9 @@
 
 #define NUM_TWEETS_SMOOTHING 100
 
+// Struct that stores info for a given sample set of tweets, such as the 
+// last time it was written to the database, how often to write, the interval
+// of the moving average, and the current moving average
 typedef struct {
 	boost::posix_time::ptime last_written_time; //last time written to database
 	int seconds_between_writes;
@@ -17,8 +20,10 @@ typedef struct {
 	double curr_avg;
 } SampleSet;
 
+// Stores the current status of a topic
 class TopicStatus {
 
+    // Struct to store a tweet score as well as the time received
 	typedef struct {
 		double score;
 		boost::posix_time::ptime time;
@@ -32,9 +37,10 @@ class TopicStatus {
 		void update_average(SampleSet &s);
 		void initialize_sample_sets();
 		std::queue<TweetScore> tweet_scores; //all tweets since last write
-		std::vector<SampleSet> sample_sets;
+		std::vector<SampleSet> sample_sets; // different sample sets keeping track of
 };
 
+// class to process tweets - we make one TweetProcess * and use it continually
 class TweetProcess { 
 
 	public: 

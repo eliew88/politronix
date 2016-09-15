@@ -24,6 +24,16 @@ int num_tweets;
 //number of unsuccessful attempts to connect to twitter before getting data
 int num_attempts;
 
+
+/* Function: sleep_mil
+ * -----------------
+ * Sleeps (pauses) the process for the specified number of 
+ * milliseconds.
+ */
+void sleep_mil(int n_millisecs) {
+        usleep(n_millisecs * 1000);
+}
+
 /* Function: handle_disconnect
  * Usage: handle_disconnect(curl_disconnect_error_code, n_disconnects)
  * ----------------------------------------------------
@@ -38,26 +48,20 @@ int num_attempts;
  * - Rate limiting errors (HTTP 420 - 429) are handled with an exponential backoff,
  *   starting at 1min and doubling indefinitely.
  * - All other errors cause the function to return false, and the program to exit. 
- *
  */
-
-void sleepmil(int n_millisecs) {
-	usleep(n_millisecs * 1000);
-}
-
 bool handle_disconnect(int error_code, int n) {
 	printf("SLEEPING FOR HTTP CODE: %d \n", error_code);
 	if (error_code == 500) {
 		int sleep_time = 250 * (n + 1);
-		sleepmil(min(sleep_time, 16*1000));
+		sleep_mil(min(sleep_time, 16*1000));
 	} else if (error_code > 500) {
 		int sleep_time = (5*1000) * pow(2, n);
-		sleepmil(min(sleep_time, 5*60*1000));
+		sleep_mil(min(sleep_time, 5*60*1000));
 	} else if (error_code >= 420 && error_code <= 499) {
 		int sleep_time = (1*1000) * pow(2, n);
-		sleepmil(sleep_time);
+		sleep_mil(sleep_time);
 	} else if (error_code == 200) {
-		sleepmil(10000);
+		sleep_mil(10000);
 	} else {
 		return false;
 	}
@@ -121,11 +125,12 @@ int main(int argc, char *argv[]) {
 		num_disconnects++;
 		printf("Disconnect #%i: %s \n", num_disconnects, error_buffer);
 
-		//get the error code
+		// Get the error code
 		long http_code = 0;
 		curl_easy_getinfo (curl, CURLINFO_RESPONSE_CODE, &http_code);
 
-		//Disconnected from streaming: handle disconnect and exit if needed, otherwise continue streaming
+		// Disconnected from streaming: handle disconnect and exit if needed
+        // Otherwise continue streaming
 		if (!handle_disconnect(http_code, num_attempts)) {
 			// Disconnect error code could not be handled: terminate program
 			printf("curl error could not be handled: Error Code: %ld, Curl Status: %i \n ", http_code, curlstatus);
@@ -133,7 +138,8 @@ int main(int argc, char *argv[]) {
 		}
 		num_attempts++;
 	}
-
+    
+    // Clean up
 	curl_easy_cleanup(curl);
 	curl_global_cleanup();
 

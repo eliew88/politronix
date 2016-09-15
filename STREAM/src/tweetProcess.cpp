@@ -23,6 +23,7 @@ using namespace boost::posix_time;
 
 /* Constructor: TopicStatus
  * -----------------------
+ * Initializes the sample sets for the status
  */
 TopicStatus::TopicStatus() {
 	initialize_sample_sets();
@@ -52,7 +53,7 @@ bool TopicStatus::should_write(SampleSet &s) {
 
 /* Function: update_time
  * ---------------------
- * Updates the last written time in TopicStatus to be the
+ * Updates the last written time in TopicStatus sample set  to be the
  * current time (only called when writing to database).
  */
 void TopicStatus::reset(SampleSet &s) {
@@ -63,6 +64,11 @@ void TopicStatus::reset(SampleSet &s) {
  * --------------------------------
  * Initializes the TopicStatus to have the correct vector of sample
  * sets.
+ *      1. Writes to DB every minute, MA of ten mins, for 1 hour display
+ *      2. Writes to DB every 5 mins, MA of 30 mins, for 5 hour display
+ *      3. Writes to DB every 20 mins, MA of 1 hr, for 24 hour display
+ *      4. Writes to DB every ~2 hrs, MA of 6 hrs, for 1 week display
+ *      5. Writes to DB every ~8 hrs, MA of ~24 hrs, for 1 month display
  */
 void TopicStatus::initialize_sample_sets() {
 	ptime now = microsec_clock::universal_time();
@@ -80,14 +86,14 @@ void TopicStatus::initialize_sample_sets() {
 
 /* Function: get_average
  * ---------------------
- * Gets the average of all the tweet scores for a given topic in
- * TopicStatus. Discards all tweets that are older than 10 minutes.
+ * Gets the average of all the tweet scores for a given sample set in the
+ * TopicStatus. Discards all tweets that are older than 12 hours.
  */
 void TopicStatus::update_average(SampleSet &s) {
 	ptime now = microsec_clock::universal_time();
-	ptime twelve_hours_ago = now - hours(12);
+	ptime minimum = now - minutes(1400);
 	TweetScore front = tweet_scores.front();
-	while (front.time < twelve_hours_ago) {
+	while (front.time < minimum) {
 		tweet_scores.pop();
 		front = tweet_scores.front();
 	}
@@ -111,7 +117,7 @@ void TopicStatus::update_average(SampleSet &s) {
 /*
  * Function: Constructor
  * ---------------------
- * create new instance, initialize map
+ * Create new instance, initialize map
  */
 TweetProcess::TweetProcess() {
 	m_buffPlace = 0; 
@@ -120,6 +126,10 @@ TweetProcess::TweetProcess() {
 	initialize_statuses();
 }
 
+/* Function: Destructor
+ * -------------------
+ * Destructor to clean up TweetProcess object
+ */
 TweetProcess::~TweetProcess() {
 	for (auto &key_value : topic_to_status) {
 		delete key_value.second;
@@ -132,31 +142,17 @@ TweetProcess::~TweetProcess() {
  * for each topic. 
  */
 void TweetProcess::initialize_statuses() {
+    // one TopicStatus for each topic
 	string statuses[] = {"clinton", "trump", "johnson", "stein", "pence", "kaine", "democrat", "republican"};
 	for (string status : statuses) {
 		topic_to_status[status] = new TopicStatus;
 	}
-	/*TopicStatus *clinton = new TopicStatus;
-	  TopicStatus *trump = new TopicStatus;
-	  TopicStatus *johnson = new TopicStatus;
-	  TopicStatus *stein = new TopicStatus;
-	  TopicStatus *pence = new TopicStatus;
-	  TopicStatus *kaine = new TopicStatus;
-	  TopicStatus *democrat = new TopicStatus;
-	  TopicStatus *republican = new TopicStatus;
-	  topic_to_status["clinton"] = clinton;
-	  topic_to_status["trump"] = trump;
-	  topic_to_status["johnson"] = johnson;
-	  topic_to_status["stein"] = stein;
-	  topic_to_status["pence"] = pence;
-	  topic_to_status["kaine"] = kaine;
-	  topic_to_status["democrat"] = democrat;
-	  topic_to_status["republican"] = republican;*/
 }
 
 /* Function: create_topic_map
  * -------------------------
  *  Creates the map that maps words to topics
+ *  TODO: Create text file and read in map data from text file
  */
 unordered_map<string, string> TweetProcess::create_topic_map() {
 	unordered_map<string, string> map;
@@ -240,14 +236,14 @@ int TweetProcess::writeToBuffer(string input, bool local) {
 /*
  * Function: processTweet
  * ---------------------
- * put strings into vector and generate score to be put in the database 
+ * Read tweet, score it, and identify topics to be
+ * updated and possibly written to database.
  */
 void TweetProcess::processTweet(bool local) {
 	string s = string(m_buffer, m_buffPlace);
 	m_buffPlace = 0; 
 	char finalTime[20]; 
-	int timeDiff; 
-
+	int timeDiff;
 	Json::Reader json_reader;
 	Json::Value root_json;
 	json_reader.parse(s, root_json, false);
@@ -257,33 +253,28 @@ void TweetProcess::processTweet(bool local) {
 	string stat = status.asString(); 
 	string createdTime = created_at.asString(); 
 	string language = lang.asString();	
-
+    
+    // score the tweet according to word map
 	double score = score_tweet(stat, m_sentiWordScores); 
-	//cout << stat << endl << score << endl << endl;
-	//cout << "Created at: " << createdTime << endl; 
 
 	//time stuff 
 	const char *timeChar = createdTime.c_str(); 
 	struct tm result, * ptm, * timeinfo;
 	time_t rawtime;
-
 	time ( &rawtime );
 	ptm = gmtime ( &rawtime );
 	timeinfo = localtime (&rawtime);
 	timeDiff = ptm->tm_hour - timeinfo->tm_hour; 
 
-	if(strptime(timeChar, "%a %b %d %T %z %Y", &result) == NULL) {
-		//Time is null, need to handle error in creating time stamp TODO
-		//cout << "issue creating time stamp" << endl;  
-	}
-	else {
+	if (strptime(timeChar, "%a %b %d %T %z %Y", &result) != NULL) {
 		result.tm_hour += timeDiff; 
 		strftime(finalTime,sizeof(finalTime), "%Y-%m-%d %T", &result);
-	}
+    }
 
 	if (language == "en") {
 		//writeToTrainingFile(stat);
-
+    
+        // find the topics contained in the tweet, and update every topic
 		unordered_set<string> topics = find_topics(stat);
 		for (string topic : topics) {
 			cout << "New tweet found for " << topic << ". Updating topic status..." << endl;
