@@ -39,6 +39,7 @@ class TweetProcess {
 
 	public: 
 		TweetProcess();
+		~TweetProcess();
 		void initialize_statuses();
 		int writeToBuffer(std::string input, bool local);
 		void processTweet(bool local); 

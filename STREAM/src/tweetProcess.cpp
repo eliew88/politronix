@@ -120,6 +120,12 @@ TweetProcess::TweetProcess() {
 	initialize_statuses();
 }
 
+TweetProcess::~TweetProcess() {
+	for (auto &key_value : topic_to_status) {
+		delete key_value.second;
+	}
+}
+
 /* Function: initialize_statuses
  * -----------------------------
  * Initializes the topic to status map to have empty statuses
@@ -159,20 +165,52 @@ unordered_map<string, string> TweetProcess::create_topic_map() {
 	map["#imwithher"] = "clinton";
 	map["#crookedhillary"] = "clinton";
 	map["@hillaryclinton"] = "clinton";
+	map["#sheswithus"] = "clinton";
+	map["#lockherup"] = "clinton";
+	map["#lockher"] = "clinton";
+	map["#hillaryforprison"] = "clinton";
+	map["#hillary4prison"] = "clinton";
+	map["#strongertogether"] = "clinton";
+	map["#lovetrumpshate"] = "clinton";
+	map["#hillarysarmy"] = "clinton";
 	map["trump"] = "trump";
 	map["donald"] = "trump";
 	map["@realdonaldtrump"] = "trump";
 	map["#makeamericagreatagain"] = "trump";
+	map["#trump2016"] = "trump";
+	map["#hillary2016"] = "clinton";
+	map["#makedonalddrumpfagain"] = "trump";
+	map["#nevertrump"] = "trump";
+	map["#maga"] = "trump";
+	map["#GOP"] = "republican";
+	map["#hillyes"] = "clinton";
+	map["#neverhillary"] = "clinton";
+	map["#ohhillno"] = "clinton";
+	map["#dumptrump"] = "trump";
+	map["#racisttrump"] = "trump";
+	map["#trumplies"] = "trump";
+	map["#republicansforhillary"] = "clinton";
+	map["#dropouthillary"] = "clinton";
 	map["@govgaryjohnson"] = "johnson";
+	map["#letgarydebate"] = "johnson";
+	map["#johnsonweld2016"] = "johnson";
+	map["#teamgov"] = "johnson";
+	map["#youin"] = "johnson";
 	map["@drjillstein"] = "stein";
 	map["stein"] = "stein";
 	map["pence"] = "pence";
 	map["@mike_pence"] = "pence";
+	map["#mikepence"] = "pence";
+	map["#timkaine"] = "kaine";
 	map["kaine"] = "kaine";
 	map["@timkaine"] = "kaine";
 	map["democrat"] = "democrat";
 	map["republican"] = "republican";
 	map["@thedemocrats"] = "democrat";
+	map["#voteblue"] = "democrat";
+	map["#votered"] = "republican";
+	map["#tcot"] = "republican";
+	map["#uniteblue"] = "democrat";
 	map["@gop"] = "republican";
 
 	return map;
