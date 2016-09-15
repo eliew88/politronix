@@ -205,6 +205,7 @@ unordered_map<string, string> TweetProcess::create_topic_map() {
 	map["@thedemocrats"] = "democrat";
 	map["#voteblue"] = "democrat";
 	map["#votered"] = "republican";
+	map["#leadright2016"] = "republican";
 	map["#tcot"] = "republican";
 	map["#uniteblue"] = "democrat";
 	map["@gop"] = "republican";
