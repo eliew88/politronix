@@ -55,7 +55,6 @@ class TweetProcess {
 
 	private: 
 		char m_buffer[1000000]; 
-		std::vector<std::string> m_tweets; 
 		int m_buffPlace; 
 		std::map<std::string, double> m_sentiWordScores;
 		std::unordered_map<std::string, std::string> word_to_topic;

@@ -106,9 +106,7 @@ int main(int argc, char *argv[]) {
 	char error_buffer[1000];
 	curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, error_buffer);
 
-	// In this case, we're not specifying a callback function for
-	// handling received data, so libcURL will use the default, which
-	// is to write to the file specified in WRITEDATA
+	// This object will get passed as the userdata to the callback function
 	curl_easy_setopt(curl, CURLOPT_WRITEDATA, tweets);
 
 	//when data comes it, this calls our write_callback function 

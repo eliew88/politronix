@@ -244,7 +244,6 @@ int TweetProcess::writeToBuffer(string input, bool local) {
  */
 void TweetProcess::processTweet(bool local) {
 	string s = string(m_buffer, m_buffPlace);
-	m_tweets.push_back(s); 
 	m_buffPlace = 0; 
 	char finalTime[20]; 
 	int timeDiff; 
