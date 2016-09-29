@@ -76,7 +76,7 @@ size_t tweet_callback(char *ptr, size_t size, size_t nmemb, void *userdata) {
 	string str = string(ptr, total); 
 	TweetProcess *tweets = reinterpret_cast<TweetProcess*>(userdata); 
 
-	num_tweets += tweets->writeToBuffer(str, local); 
+	num_tweets += tweets->write_to_buffer(str, local); 
 	if (num_tweets % STATS_UPDATE_INTERVAL == 0) { //print STATS update periodically
 		printf("STATS UPDATE\nNumber of tweets processed: %i\n", num_tweets);
 		printf("Number of disconnects: %i\n", num_disconnects);

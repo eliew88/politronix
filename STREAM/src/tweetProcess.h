@@ -47,22 +47,25 @@ class TweetProcess {
 		TweetProcess();
 		~TweetProcess();
 		void initialize_statuses();
-		int writeToBuffer(std::string input, bool local);
-		void processTweet(bool local); 
-		double score_tweet(std::string tweet, std::map<std::string, double>& word_scores);
+		int write_to_buffer(std::string input, bool local);
+		void find_pos_and_neg_words(std::string& tweet, std::string& pos_words, std::string& neg_words);
+        void process_tweet(bool local); 
+        std::string clean_word(std::string word);
+        double score_tweet(std::string tweet, std::map<std::string, double>& word_scores);
 		std::map<std::string, double> create_map();
 		std::unordered_map<std::string, std::string> create_topic_map();
 		std::string trim_word(std::string untrimmed);
 		std::unordered_set<std::string> find_topics(std::string tweet);
 		void update_topic(std::string tweet, std::string tweet_time, double score, std::string topic, bool local);
-		void writeToTrainingFile(std::string tweet);
-		void writeToDatabase(std::string tweet, std::string tweetTime, double score, bool local, int write_interval); 
+		void write_to_training_file(std::string tweet);
+        void write_significant_tweet_to_database(std::string tweet, std::string topic, std::string time, double score, bool local); 
+		void write_to_database(std::string tweet, std::string tweetTime, double score, bool local, int write_interval); 
 		std::string get_current_time(); 
 
 	private: 
 		char m_buffer[1000000]; 
 		int m_buffPlace; 
-		std::map<std::string, double> m_sentiWordScores;
+		std::map<std::string, double> word_scores;
 		std::unordered_map<std::string, std::string> word_to_topic;
 		std::unordered_map<std::string, TopicStatus*> topic_to_status;
 };
