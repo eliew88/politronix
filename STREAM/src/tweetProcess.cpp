@@ -498,36 +498,16 @@ double TweetProcess::score_tweet(string tweet, map<string, double>& word_scores)
  */
 map<string, double> TweetProcess::create_map() {
     map<string, double> scores;
-    ifstream file("SentiWordNet_3.0.0_20130122.txt");
+    ifstream file("scores.txt");
 
     string entry;
-
-    //Get rid of the documentation (first 27 lines of the text file)
-    for (int i = 0; i < 27; i++) {
-        getline(file, entry);
-    }
-
-    //parse the rest of the file (each run of loop parses one line)
-    while (file >> entry) {
-        file >> entry;
-        file >> entry;
-
-        double score = 0;
-        if (entry != "#" && entry != "") {
-            score = stod(entry);
-        }
-        file >> entry;
-        if (entry != "#" && entry != "") {
-            score -= stod(entry);
-        }
-
-        file >> entry;
-
-        string word = trim_word(entry);
+    while (getline(file, entry)) {
+        size_t space_index = entry.find_first_of(' ');
+        string word = entry.substr(0, space_index);
+        double score = stod(entry.substr(space_index + 1));
         scores[word] = score;
-
-        getline(file, entry);
     }
+
     return scores;
 }
 
